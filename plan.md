@@ -12,19 +12,22 @@
 
 ## Implementation status (3 Oct 2026)
 
-**Built and verified:** M0 to M6, CI, and a first version of the M7 onboarding seed.
+**Built and verified:** M0 to M6, the parser bake-off with tier-4 adapters, batch corrections, CI, and the M7
+pilot-deploy tooling. The onboarding/router skills and Langfuse wiring from M7 are not built yet.
 
 **Verification**
-- 25 backend integration tests on real Postgres (including append-only enforcement and cross-tenant trace and search checks).
-- 2 Playwright end-to-end journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace → search.
-- GitHub Actions CI runs all of the above on every push.
-- ruff, mypy --strict, eslint and tsc are all clean.
+- Backend unit and integration tests on real Postgres, including append-only enforcement, correction hash-binding and
+  cross-tenant trace, search and correction checks; tier-4 contract tests on recorded responses (no network).
+- 2 Playwright journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace →
+  correction → search.
+- CI on every push: lint, types, tests, the bake-off gate (no invented values, ≥95% field accuracy on the synthetic
+  set), OpenAPI drift, and both journeys against a live stack.
 
-**Not built yet**
-- Batch supersede (versioned re-issue) UI; the schema supports it.
-- Tier-4 adapters (Reducto, ADE, Sol).
-- The parser bake-off CLI.
-- The Cloud Run deploy.
+**Not built or not verified yet**
+- The deploy (`infra/cloudrun/`, `deploy.yml`) is syntax-checked only; its first real run is the test.
+- Reducto and ADE request/response shapes follow their public docs; confirm with free credits before relying on them.
+  Tier-4 per-page prices in `platform/config.py` are placeholders.
+- M7: `keel-onboard` / `keel-router` skills, tenant profile approval, Langfuse.
 
 **Divergences from the plan (each kept deliberately):**
 

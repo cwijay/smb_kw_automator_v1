@@ -1,0 +1,85 @@
+# Pilot deploy to Cloud Run. Runs only after CI is green on main (or by hand), authenticating with
+# Workload Identity Federation: no service-account keys in GitHub. One-time setup: infra/cloudrun/bootstrap.sh.
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT }}
+      REGION: ${{ vars.GCP_REGION }}
+      S3_BUCKET: ${{ vars.KEEL_S3_BUCKET }}
+      S3_ENDPOINT_URL: ${{ vars.KEEL_S3_ENDPOINT_URL }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.workflow_run.head_sha || github.sha }}" }
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Image names
+        run: |
+          REPO="$REGION-docker.pkg.dev/$PROJECT/keel"
+          echo "API_IMAGE=$REPO/api:$SHA" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=$REPO/web:$SHA" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build and push the API image
+        run: docker build -t "$API_IMAGE" backend && docker push "$API_IMAGE"
+      - name: Migrate (the only step with the owner database URL)
+        run: |
+          envsubst < infra/cloudrun/migrate-job.yaml > /tmp/migrate.yaml
+          gcloud run jobs replace /tmp/migrate.yaml --region "$REGION" --project "$PROJECT"
+          gcloud run jobs execute keel-migrate --wait --region "$REGION" --project "$PROJECT"
+      - name: Deploy the API
+        run: |
+          # First deploy: the web URL isn't known yet; magic links use it, so the API is redeployed below.
+          WEB_URL=$(gcloud run services describe keel-web --region "$REGION" --project "$PROJECT" \
+            --format 'value(status.url)' 2>/dev/null || true)
+          export WEB_URL
+          envsubst < infra/cloudrun/api.yaml > /tmp/api.yaml
+          gcloud run services replace /tmp/api.yaml --region "$REGION" --project "$PROJECT"
+          gcloud run services add-iam-policy-binding keel-api --member allUsers --role roles/run.invoker \
+            --region "$REGION" --project "$PROJECT" >/dev/null
+          echo "API_URL=$(gcloud run services describe keel-api --region "$REGION" --project "$PROJECT" \
+            --format 'value(status.url)')" >> "$GITHUB_ENV"
+      - name: Build, push and deploy the web app (API URL is baked into Next's rewrites at build)
+        run: |
+          docker build --build-arg KEEL_API_URL="$API_URL" -t "$WEB_IMAGE" frontend && docker push "$WEB_IMAGE"
+          envsubst < infra/cloudrun/web.yaml > /tmp/web.yaml
+          gcloud run services replace /tmp/web.yaml --region "$REGION" --project "$PROJECT"
+          gcloud run services add-iam-policy-binding keel-web --member allUsers --role roles/run.invoker \
+            --region "$REGION" --project "$PROJECT" >/dev/null
+          echo "WEB_URL=$(gcloud run services describe keel-web --region "$REGION" --project "$PROJECT" \
+            --format 'value(status.url)')" >> "$GITHUB_ENV"
+      - name: Point the API at the web URL (magic links, invites)
+        run: |
+          envsubst < infra/cloudrun/api.yaml > /tmp/api.yaml
+          gcloud run services replace /tmp/api.yaml --region "$REGION" --project "$PROJECT"
+      - name: Deploy the worker job (Cloud Scheduler runs it every minute)
+        run: |
+          envsubst < infra/cloudrun/worker-job.yaml > /tmp/worker.yaml
+          gcloud run jobs replace /tmp/worker.yaml --region "$REGION" --project "$PROJECT"
+      - name: Smoke test
+        run: |
+          curl -fsS "$API_URL/api/healthz"
+          curl -fsS -o /dev/null -w "web %{http_code}\n" "$WEB_URL/login"
+          curl -fsS "$WEB_URL/api/healthz"  # through the same-origin proxy
+          echo "Deployed $SHA → $WEB_URL" >> "$GITHUB_STEP_SUMMARY"

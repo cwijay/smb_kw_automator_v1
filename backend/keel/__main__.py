@@ -47,7 +47,8 @@ def main(argv: list[str] | None = None) -> None:
     api.add_argument("--host", default="127.0.0.1")
     api.add_argument("--port", type=int, default=8000)
     api.add_argument("--reload", action="store_true")
-    sub.add_parser("worker")
+    worker = sub.add_parser("worker")
+    worker.add_argument("--drain", action="store_true", help="process queued jobs, then exit (Cloud Run Job)")
     sub.add_parser("migrate")
     sub.add_parser("seed")
     sub.add_parser("openapi")
@@ -71,9 +72,9 @@ def main(argv: list[str] | None = None) -> None:
 
         uvicorn.run("keel.api.app:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
     elif args.cmd == "worker":
-        from keel.workers.runner import run_forever
+        from keel.workers.runner import drain_and_exit, run_forever
 
-        asyncio.run(run_forever())
+        asyncio.run(drain_and_exit() if args.drain else run_forever())
     elif args.cmd == "migrate":
         _migrate()
     elif args.cmd == "seed":

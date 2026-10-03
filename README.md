@@ -22,6 +22,7 @@ Postgres holds everything. Row-level security isolates each business's data.
 | Orders → invoices | Prices come from the customer's price list or the catalog, never the paper. Issuing an invoice is a separate approval. Invoices export as PDF and as QuickBooks or Xero CSV. |
 | Batch records | Batch sheets become signed-off batches: product, output lot, ingredient lots. A blank lot code blocks sign-off until a person records it as a trace gap. Formula deviations over 2% are flagged. Batch tables are append-only (trigger + revoked UPDATE/DELETE). |
 | Food safety | Critical control points with limits. HACCP logs become verified readings; a blank reading is *missing*, never passed, and every missing or out-of-range reading needs a written corrective action. One-click inspection binder PDF. |
+| Corrections | Signed batch records are never edited. A correction is a new version that supersedes the old one, behind its own approval, with the reason on record; the old version stays readable and trace follows the latest. |
 | Lot trace | Recursive SQL from any lot: back to supplier lots, forward through batches to the orders and customers that received it, with trace gaps called out. Lots are allocated on order lines. |
 | Search | Every page Keel reads is searchable: exact words (Postgres full-text), misspellings and shorthand (pg_trgm), and with an OpenAI key similar meaning (pgvector, `text-embedding-3-small` at 512 dims), fused by reciprocal rank fusion. Vectors record their model; `keel reindex` re-embeds after a model change. |
 | Ask Keel | A deepagents agent with skills (`backend/skills/`), shared rules, tenant memory, read-only tools and streamed answers. It works offline without API keys. |
@@ -55,11 +56,28 @@ Add `OPENAI_API_KEY` for GPT-6 Luna extraction and full agent answers, and `GOOG
 ## Checks
 
 ```bash
-make test        # 25 backend integration tests against real Postgres (RLS, approvals, append-only, trace, search, injection, OCR, agent)
+make test        # backend unit and integration tests against real Postgres (RLS, approvals, append-only, trace, search, injection, OCR, agent)
 make lint        # ruff + eslint
 make typecheck   # mypy --strict + tsc
 make e2e         # Playwright: order → invoice → Ask Keel, and batch sheet → HACCP log → lot trace (needs make dev)
 ```
+
+## Parser bake-off
+
+```bash
+cd backend
+uv run keel evals parsers --engines local-rules,luna,gemini,sol,reducto,ade --gold evals/gold/synthetic
+```
+
+Reports field accuracy, **invented values** (a value where the paper is empty), unreadable recall, $ per 1k pages and
+latency, by engine, document type and field. Engines without a key are skipped. Real pages stay outside git; see
+`backend/evals/gold/README.md`. Tier-4 engines (Reducto, ADE, GPT-6 Sol) only run in the pipeline when
+`KEEL_TIER4_ENGINE` names one, and only on pages still failing checks after the Gemini re-read.
+
+## Deploy
+
+Cloud Run pilot: Neon Postgres, Cloudflare R2, a scheduled worker job, deploys gated on green CI. See
+`infra/cloudrun/README.md`.
 
 CI (`.github/workflows/ci.yml`) runs the same checks on every push, then both Playwright journeys against a live stack, and fails if the generated API client is out of date.
 

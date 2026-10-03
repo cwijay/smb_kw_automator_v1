@@ -2,7 +2,7 @@
 .PHONY: setup db migrate seed api worker web dev test e2e lint typecheck build openapi
 
 setup:            ## install backend + frontend dependencies
-	cd backend && uv sync --extra ocr
+	cd backend && uv sync --extra ocr --extra cloud
 	cd frontend && pnpm install
 
 db:               ## start Postgres 17 + pgvector in Docker (skip if you run Postgres yourself)

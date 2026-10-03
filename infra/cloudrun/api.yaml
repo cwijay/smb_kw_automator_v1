@@ -1,0 +1,39 @@
+# keel-api: FastAPI + Ask Keel. Scales to zero. Never gets the owner DB URL (it cannot bypass RLS).
+# Rendered by .github/workflows/deploy.yml with envsubst: ${REGION} ${PROJECT} ${API_IMAGE} ${WEB_URL} ${S3_BUCKET} ${S3_ENDPOINT_URL}
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: keel-api
+  labels: { app: keel }
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: keel-runtime@${PROJECT}.iam.gserviceaccount.com
+      containerConcurrency: 40
+      timeoutSeconds: 300
+      containers:
+        - image: ${API_IMAGE}
+          args: ["keel", "api", "--host", "0.0.0.0", "--port", "8080"]
+          ports: [{ containerPort: 8080 }]
+          resources: { limits: { cpu: "1", memory: 1Gi } }
+          env:
+            - { name: KEEL_ENV, value: prod }
+            - { name: KEEL_COOKIE_SECURE, value: "true" }
+            - { name: KEEL_FRONTEND_URL, value: "${WEB_URL}" }
+            - { name: KEEL_STORAGE_BACKEND, value: s3 }
+            - { name: KEEL_S3_BUCKET, value: "${S3_BUCKET}" }
+            - { name: KEEL_S3_ENDPOINT_URL, value: "${S3_ENDPOINT_URL}" }
+            - { name: KEEL_DATABASE_URL, valueFrom: { secretKeyRef: { name: keel-database-url, key: latest } } }
+            - { name: AWS_ACCESS_KEY_ID, valueFrom: { secretKeyRef: { name: keel-s3-access-key-id, key: latest } } }
+            - { name: AWS_SECRET_ACCESS_KEY, valueFrom: { secretKeyRef: { name: keel-s3-secret-access-key, key: latest } } }
+            - { name: OPENAI_API_KEY, valueFrom: { secretKeyRef: { name: keel-openai-api-key, key: latest } } }
+            - { name: GOOGLE_API_KEY, valueFrom: { secretKeyRef: { name: keel-google-api-key, key: latest } } }
+          startupProbe:
+            httpGet: { path: /api/healthz, port: 8080 }
+            periodSeconds: 2
+            failureThreshold: 30

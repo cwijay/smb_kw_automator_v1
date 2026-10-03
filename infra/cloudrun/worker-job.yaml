@@ -1,0 +1,30 @@
+# keel-worker: document processing (render, OCR, extract). A Cloud Run Job that drains the queue and
+# exits; Cloud Scheduler runs it every minute (see bootstrap.sh). Nothing idles, so it costs ~nothing.
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: keel-worker
+  labels: { app: keel }
+spec:
+  template:
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: keel-runtime@${PROJECT}.iam.gserviceaccount.com
+          maxRetries: 0
+          timeoutSeconds: 120
+          containers:
+            - image: ${API_IMAGE}
+              args: ["keel", "worker", "--drain"]
+              resources: { limits: { cpu: "2", memory: 2Gi } }
+              env:
+                - { name: KEEL_ENV, value: prod }
+                - { name: KEEL_STORAGE_BACKEND, value: s3 }
+                - { name: KEEL_S3_BUCKET, value: "${S3_BUCKET}" }
+                - { name: KEEL_S3_ENDPOINT_URL, value: "${S3_ENDPOINT_URL}" }
+                - { name: KEEL_DATABASE_URL, valueFrom: { secretKeyRef: { name: keel-database-url, key: latest } } }
+                - { name: AWS_ACCESS_KEY_ID, valueFrom: { secretKeyRef: { name: keel-s3-access-key-id, key: latest } } }
+                - { name: AWS_SECRET_ACCESS_KEY, valueFrom: { secretKeyRef: { name: keel-s3-secret-access-key, key: latest } } }
+                - { name: OPENAI_API_KEY, valueFrom: { secretKeyRef: { name: keel-openai-api-key, key: latest } } }
+                - { name: GOOGLE_API_KEY, valueFrom: { secretKeyRef: { name: keel-google-api-key, key: latest } } }

@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://keel_app:keel_app@localhost:5432/keel"
     database_owner_url: str = "postgresql+psycopg://keel_owner:keel_owner@localhost:5432/keel"
 
-    storage_dir: Path = Path("./var/storage")
+    storage_backend: Literal["local", "s3"] = "local"
+    storage_dir: Path = Path("./var/storage")  # local backend
+    s3_bucket: str | None = None  # s3 backend: R2, MinIO or S3
+    s3_endpoint_url: str | None = None  # e.g. https://<account>.r2.cloudflarestorage.com
+    s3_region: str = "auto"
     frontend_url: str = "http://localhost:3000"
 
     session_cookie: str = "keel_session"
@@ -66,6 +70,7 @@ class Settings(BaseSettings):
     low_confidence: float = 0.75
     unusual_quantity_factor: float = 3.0
     worker_poll_seconds: float = 1.0
+    worker_drain_max_seconds: float = 50.0  # `keel worker --drain` stops before the next scheduled run
     monthly_ai_budget_usd: float = 10.0
 
     @property

@@ -1,0 +1,22 @@
+# keel-web: Next.js. The browser only talks to this origin; /api/* is proxied to keel-api server-side,
+# so the session cookie stays first-party. The API URL is baked in at build time (Next rewrites).
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: keel-web
+  labels: { app: keel }
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      serviceAccountName: keel-runtime@${PROJECT}.iam.gserviceaccount.com
+      containerConcurrency: 80
+      containers:
+        - image: ${WEB_IMAGE}
+          args: ["pnpm", "start", "-p", "8080"]
+          ports: [{ containerPort: 8080 }]
+          resources: { limits: { cpu: "1", memory: 512Mi } }

@@ -1,6 +1,7 @@
 """Postgres-backed job queue (no in-process state). Safe with many workers via SKIP LOCKED."""
 
 import asyncio
+import time
 import traceback
 import uuid
 from collections.abc import Awaitable, Callable
@@ -81,6 +82,18 @@ async def run_once() -> bool:
 async def drain() -> None:
     while await run_once():
         pass
+
+
+async def drain_and_exit() -> None:
+    """For scheduled runs (Cloud Run Job every minute): empty the queue, then stop, so nothing idles."""
+    configure_logging()
+    started = time.monotonic()
+    count = 0
+    while await run_once():
+        count += 1
+        if time.monotonic() - started > get_settings().worker_drain_max_seconds:
+            break  # the next scheduled run picks up the rest
+    log.info("worker.drained", jobs=count)
 
 
 async def run_forever() -> None:

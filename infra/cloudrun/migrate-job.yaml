@@ -1,0 +1,23 @@
+# keel-migrate: the only workload that gets the owner DB URL. Run by deploy.yml before the API rolls out.
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: keel-migrate
+  labels: { app: keel }
+spec:
+  template:
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: keel-migrator@${PROJECT}.iam.gserviceaccount.com
+          maxRetries: 0
+          timeoutSeconds: 300
+          containers:
+            - image: ${API_IMAGE}
+              args: ["keel", "migrate"]
+              resources: { limits: { cpu: "1", memory: 1Gi } }
+              env:
+                - { name: KEEL_ENV, value: prod }
+                - { name: KEEL_DATABASE_URL, valueFrom: { secretKeyRef: { name: keel-database-url, key: latest } } }
+                - { name: KEEL_DATABASE_OWNER_URL, valueFrom: { secretKeyRef: { name: keel-database-owner-url, key: latest } } }
