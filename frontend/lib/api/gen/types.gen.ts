@@ -1194,6 +1194,94 @@ export type ProductOut = {
 };
 
 /**
+ * ProfileApplyIn
+ */
+export type ProfileApplyIn = {
+    /**
+     * Fiscal Year End
+     */
+    fiscal_year_end?: string | null;
+    /**
+     * Books Export
+     */
+    books_export?: 'qbo' | 'xero' | 'none' | null;
+    /**
+     * Ledger
+     */
+    ledger?: 'quickbooks' | 'xero' | 'spreadsheet' | 'none' | null;
+    /**
+     * Allergens
+     */
+    allergens?: Array<string> | null;
+    /**
+     * Notes
+     */
+    notes?: string | null;
+    /**
+     * Approval Id
+     */
+    approval_id: string;
+};
+
+/**
+ * ProfileIn
+ *
+ * Only the fields given are changed.
+ */
+export type ProfileIn = {
+    /**
+     * Fiscal Year End
+     */
+    fiscal_year_end?: string | null;
+    /**
+     * Books Export
+     */
+    books_export?: 'qbo' | 'xero' | 'none' | null;
+    /**
+     * Ledger
+     */
+    ledger?: 'quickbooks' | 'xero' | 'spreadsheet' | 'none' | null;
+    /**
+     * Allergens
+     */
+    allergens?: Array<string> | null;
+    /**
+     * Notes
+     */
+    notes?: string | null;
+};
+
+/**
+ * ProfileOut
+ */
+export type ProfileOut = {
+    /**
+     * Profile
+     */
+    profile: {
+        [key: string]: unknown;
+    };
+    /**
+     * Onboarding
+     */
+    onboarding: Array<Step>;
+};
+
+/**
+ * ProfileStageOut
+ */
+export type ProfileStageOut = {
+    /**
+     * Approval Id
+     */
+    approval_id: string;
+    /**
+     * Changes
+     */
+    changes: Array<string>;
+};
+
+/**
  * ReadingOut
  */
 export type ReadingOut = {
@@ -1335,6 +1423,28 @@ export type StageOut = {
     summary: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * Step
+ */
+export type Step = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Done
+     */
+    done: boolean;
+    /**
+     * Href
+     */
+    href: string;
 };
 
 /**
@@ -1822,6 +1932,72 @@ export type InviteAcceptResponses = {
 };
 
 export type InviteAcceptResponse = InviteAcceptResponses[keyof InviteAcceptResponses];
+
+export type GetProfileData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/profile';
+};
+
+export type GetProfileResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProfileOut;
+};
+
+export type GetProfileResponse = GetProfileResponses[keyof GetProfileResponses];
+
+export type ApplyProfileData = {
+    body: ProfileApplyIn;
+    path?: never;
+    query?: never;
+    url: '/api/profile';
+};
+
+export type ApplyProfileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApplyProfileError = ApplyProfileErrors[keyof ApplyProfileErrors];
+
+export type ApplyProfileResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProfileOut;
+};
+
+export type ApplyProfileResponse = ApplyProfileResponses[keyof ApplyProfileResponses];
+
+export type StageProfileData = {
+    body: ProfileIn;
+    path?: never;
+    query?: never;
+    url: '/api/profile/stage';
+};
+
+export type StageProfileErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StageProfileError = StageProfileErrors[keyof StageProfileErrors];
+
+export type StageProfileResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProfileStageOut;
+};
+
+export type StageProfileResponse = StageProfileResponses[keyof StageProfileResponses];
 
 export type ListCustomersData = {
     body?: never;

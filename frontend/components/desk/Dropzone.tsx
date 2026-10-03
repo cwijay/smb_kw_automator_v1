@@ -35,6 +35,7 @@ export function Dropzone({ disabled }: { disabled?: boolean }) {
     setNotes(out);
     await qc.invalidateQueries({ queryKey: ["documents"] });
     await qc.invalidateQueries({ queryKey: ["dashboard"] });
+    await qc.invalidateQueries({ queryKey: ["profile"] }); // onboarding: first paper read
   }
 
   return (

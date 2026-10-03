@@ -12,13 +12,14 @@
 
 ## Implementation status (3 Oct 2026)
 
-**Built and verified:** M0 to M6, the parser bake-off with tier-4 adapters, batch corrections, CI, and the M7
-pilot-deploy tooling. The onboarding/router skills and Langfuse wiring from M7 are not built yet.
+**Built and verified:** M0 to M7: documents, orders and invoices, batches, HACCP, lot trace, hybrid search,
+Ask Keel, batch corrections, the parser bake-off with tier-4 adapters, onboarding with an approval-gated tenant
+profile, `keel-onboard` / `keel-router` skills, optional Langfuse tracing, CI, and the pilot-deploy tooling.
 
 **Verification**
 - Backend unit and integration tests on real Postgres, including append-only enforcement, correction hash-binding and
   cross-tenant trace, search and correction checks; tier-4 contract tests on recorded responses (no network).
-- 2 Playwright journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace →
+- 2 Playwright journeys: sign-up → profile approval → order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace →
   correction → search.
 - CI on every push: lint, types, tests, the bake-off gate (no invented values, ≥95% field accuracy on the synthetic
   set), OpenAPI drift, and both journeys against a live stack.
@@ -27,7 +28,9 @@ pilot-deploy tooling. The onboarding/router skills and Langfuse wiring from M7 a
 - The deploy (`infra/cloudrun/`, `deploy.yml`) is syntax-checked only; its first real run is the test.
 - Reducto and ADE request/response shapes follow their public docs; confirm with free credits before relying on them.
   Tier-4 per-page prices in `platform/config.py` are placeholders.
-- M7: `keel-onboard` / `keel-router` skills, tenant profile approval, Langfuse.
+- Langfuse tracing is unit-tested for on/off and tagging only; it hasn't been pointed at a live Langfuse.
+- The pilot proof from M7 (full loop in Playwright against the deployed environment, onboarding in under 20
+  minutes, ≤ $5 per site per month) needs the real deploy first.
 
 **Divergences from the plan (each kept deliberately):**
 

@@ -209,6 +209,25 @@ def build_tools(org_id: uuid.UUID, user_id: uuid.UUID) -> list[BaseTool]:
         return _j(result or {"error": f"No lot {lot_code} on record."})
 
     @tool
+    async def onboarding_status() -> str:
+        """Setup progress: which onboarding steps are done, which is next, and the business profile."""
+        from keel.identity.models import TenantProfile
+        from keel.identity.profile import onboarding
+
+        async with session() as db:
+            p = await db.get(TenantProfile, org_id)
+            profile = p.profile if p else {}
+            steps = await onboarding(db, profile)
+        nxt = next((s for s in steps if not s.done), None)
+        return _j(
+            {
+                "steps": [{"title": s.title, "done": s.done, "where": s.href} for s in steps],
+                "next": {"title": nxt.title, "where": nxt.href} if nxt else None,
+                "profile": profile,
+            }
+        )
+
+    @tool
     async def food_safety_status(days: int = 30) -> str:
         """HACCP readings in the last `days` days: counts within limits, missing and out of range, with the
         flagged readings and their corrective actions."""
@@ -257,4 +276,5 @@ def build_tools(org_id: uuid.UUID, user_id: uuid.UUID) -> list[BaseTool]:
         catalog,
         trace_lot,
         food_safety_status,
+        onboarding_status,
     ]

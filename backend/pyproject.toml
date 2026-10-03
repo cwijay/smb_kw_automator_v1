@@ -34,6 +34,9 @@ ocr = ["rapidocr>=3.0", "onnxruntime>=1.20"]
 cloud = [
     "boto3>=1.40",
 ]
+observability = [
+    "langfuse>=3",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.25", "ruff>=0.9", "mypy>=1.15", "asgi-lifespan>=2.1"]

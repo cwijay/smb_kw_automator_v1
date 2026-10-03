@@ -18,6 +18,7 @@ from keel.identity.service import Ctx
 from keel.platform.config import get_settings
 from keel.platform.db import tenant_session
 from keel.platform.logging import log
+from keel.platform.tracing import trace_config
 
 router = APIRouter(tags=["agent"])
 
@@ -41,7 +42,9 @@ def _sse(event: dict[str, Any]) -> str:
 
 async def _stream(ctx: Ctx, body: AskIn) -> AsyncIterator[str]:
     agent = await build_agent(ctx.org_id, ctx.user_id)
-    config = thread(ctx.org_id, ctx.user_id, body.conversation_id)
+    config = thread(ctx.org_id, ctx.user_id, body.conversation_id) | trace_config(
+        "ask-keel", ctx.org_id, ctx.user_id, str(body.conversation_id)
+    )
     tin = tout = 0
     streamed_text = False
     try:

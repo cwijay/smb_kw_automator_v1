@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from keel.documents.engines.base import EngineResult, PageInput, cost
+from keel.platform.tracing import trace_config
 
 SYSTEM = """You transcribe business paperwork for a small food producer into the given schema.
 
@@ -48,7 +49,10 @@ class LlmExtractor:
         if hint:
             content.append({"type": "text", "text": hint})
         llm = _model(self.model_id).with_structured_output(schema, include_raw=True)
-        out = await llm.ainvoke([SystemMessage(SYSTEM), HumanMessage(content=content)])  # type: ignore[arg-type]
+        out = await llm.ainvoke(
+            [SystemMessage(SYSTEM), HumanMessage(content=content)],  # type: ignore[arg-type]
+            config=trace_config(f"extract:{schema.__name__}"),
+        )
         usage = getattr(out["raw"], "usage_metadata", None) or {}
         tin, tout = int(usage.get("input_tokens", 0)), int(usage.get("output_tokens", 0))
         model_name = self.model_id.split(":", 1)[1]

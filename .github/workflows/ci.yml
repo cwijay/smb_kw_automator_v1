@@ -27,7 +27,7 @@ jobs:
         with: { enable-cache: true, cache-dependency-glob: backend/uv.lock }
       - name: Roles and databases
         run: psql -h localhost -U postgres -f backend/scripts/init-db.sql
-      - run: uv sync --extra ocr --extra cloud --locked
+      - run: uv sync --extra ocr --extra cloud --extra observability --locked
         working-directory: backend
       - name: Lint
         working-directory: backend
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
       - run: psql -h localhost -U postgres -f backend/scripts/init-db.sql
-      - run: uv sync --extra ocr --extra cloud --locked
+      - run: uv sync --extra ocr --extra cloud --extra observability --locked
         working-directory: backend
       - run: pnpm install --frozen-lockfile
         working-directory: frontend

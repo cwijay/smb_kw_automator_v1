@@ -17,6 +17,17 @@ test("paper order → approved order → invoice → ask Keel", async ({ page })
   await page.fill("#signup_password", "correct-horse-battery");
   await page.click("button[type=submit]");
   await expect(page.getByText("Drop today's paper here")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Getting set up" })).toContainText("0 of 5 done");
+
+  // Business profile: changes are shown as a diff and saved only with an approval
+  await page.goto("/settings");
+  await page.fill("#fiscal_year_end", "03-31");
+  await page.selectOption("#books_export", "xero");
+  await page.getByRole("button", { name: "Review the changes" }).click();
+  await expect(page.getByText("Fiscal year ends: — → 03-31")).toBeVisible();
+  await page.click("#approve_profile");
+  await expect(page.locator("#fiscal_year_end")).toHaveValue("03-31");
+  await expect(page.getByText("Approval needed · update profile")).toHaveCount(0);
 
   // Catalog: products and a customer with the shorthand people actually write
   await page.goto("/catalog");

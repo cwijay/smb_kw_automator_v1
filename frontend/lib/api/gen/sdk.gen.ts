@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ActivityData, ActivityResponses, AllocateData, AllocateErrors, AllocateResponses, AskData, AskErrors, AskResponses, CommitCorrectionData, CommitCorrectionErrors, CommitCorrectionResponses, CorrectFieldData, CorrectFieldErrors, CorrectFieldResponses, CreateCcpData, CreateCcpErrors, CreateCcpResponses, CreateCustomerData, CreateCustomerErrors, CreateCustomerResponses, CreateProductData, CreateProductErrors, CreateProductResponses, CustomerPricesData, CustomerPricesErrors, CustomerPricesResponses, DashboardData, DashboardResponses, DecideApprovalData, DecideApprovalErrors, DecideApprovalResponses, DecideData, DecideErrors, DecideResponses, DetailData, DetailErrors, DetailResponses, ExportInvoicesData, ExportInvoicesErrors, ExportInvoicesResponses, GetBatchData, GetBatchErrors, GetBatchResponses, GetOrderData, GetOrderErrors, GetOrderResponses, HaccpBinderData, HaccpBinderErrors, HaccpBinderResponses, HealthzData, HealthzResponses, ImportProductsData, ImportProductsErrors, ImportProductsResponses, InviteAcceptData, InviteAcceptErrors, InviteAcceptResponses, InviteData, InviteErrors, InvitePreviewData, InvitePreviewErrors, InvitePreviewResponses, InviteResponses, InvoicePdfData, InvoicePdfErrors, InvoicePdfResponses, IssueInvoiceData, IssueInvoiceErrors, IssueInvoiceResponses, ListBatchesData, ListBatchesResponses, ListCcpsData, ListCcpsResponses, ListCustomersData, ListCustomersResponses, ListDocumentsData, ListDocumentsResponses, ListInvoicesData, ListInvoicesResponses, ListLotsData, ListLotsErrors, ListLotsResponses, ListOrdersData, ListOrdersResponses, ListProductsData, ListProductsResponses, ListReadingsData, ListReadingsErrors, ListReadingsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutResponses, MagicLinkData, MagicLinkErrors, MagicLinkResponses, MagicVerifyData, MagicVerifyErrors, MagicVerifyResponses, MeData, MembersData, MembersResponses, MeResponses, PageImageData, PageImageErrors, PageImageResponses, PendingData, PendingResponses, RemoveData, RemoveErrors, RemoveResponses, SearchData, SearchErrors, SearchResponses, SetCustomerPriceData, SetCustomerPriceErrors, SetCustomerPriceResponses, SetRoleData, SetRoleErrors, SetRoleResponses, SignupData, SignupErrors, SignupResponses, StageCorrectionData, StageCorrectionErrors, StageCorrectionResponses, StageInvoiceData, StageInvoiceErrors, StageInvoiceResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, TraceData, TraceErrors, TraceResponses, UpdateCustomerData, UpdateCustomerErrors, UpdateCustomerResponses, UpdateOrgData, UpdateOrgErrors, UpdateOrgResponses, UpdateProductData, UpdateProductErrors, UpdateProductResponses, UploadData, UploadErrors, UploadResponses } from './types.gen';
+import type { ActivityData, ActivityResponses, AllocateData, AllocateErrors, AllocateResponses, ApplyProfileData, ApplyProfileErrors, ApplyProfileResponses, AskData, AskErrors, AskResponses, CommitCorrectionData, CommitCorrectionErrors, CommitCorrectionResponses, CorrectFieldData, CorrectFieldErrors, CorrectFieldResponses, CreateCcpData, CreateCcpErrors, CreateCcpResponses, CreateCustomerData, CreateCustomerErrors, CreateCustomerResponses, CreateProductData, CreateProductErrors, CreateProductResponses, CustomerPricesData, CustomerPricesErrors, CustomerPricesResponses, DashboardData, DashboardResponses, DecideApprovalData, DecideApprovalErrors, DecideApprovalResponses, DecideData, DecideErrors, DecideResponses, DetailData, DetailErrors, DetailResponses, ExportInvoicesData, ExportInvoicesErrors, ExportInvoicesResponses, GetBatchData, GetBatchErrors, GetBatchResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProfileData, GetProfileResponses, HaccpBinderData, HaccpBinderErrors, HaccpBinderResponses, HealthzData, HealthzResponses, ImportProductsData, ImportProductsErrors, ImportProductsResponses, InviteAcceptData, InviteAcceptErrors, InviteAcceptResponses, InviteData, InviteErrors, InvitePreviewData, InvitePreviewErrors, InvitePreviewResponses, InviteResponses, InvoicePdfData, InvoicePdfErrors, InvoicePdfResponses, IssueInvoiceData, IssueInvoiceErrors, IssueInvoiceResponses, ListBatchesData, ListBatchesResponses, ListCcpsData, ListCcpsResponses, ListCustomersData, ListCustomersResponses, ListDocumentsData, ListDocumentsResponses, ListInvoicesData, ListInvoicesResponses, ListLotsData, ListLotsErrors, ListLotsResponses, ListOrdersData, ListOrdersResponses, ListProductsData, ListProductsResponses, ListReadingsData, ListReadingsErrors, ListReadingsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutResponses, MagicLinkData, MagicLinkErrors, MagicLinkResponses, MagicVerifyData, MagicVerifyErrors, MagicVerifyResponses, MeData, MembersData, MembersResponses, MeResponses, PageImageData, PageImageErrors, PageImageResponses, PendingData, PendingResponses, RemoveData, RemoveErrors, RemoveResponses, SearchData, SearchErrors, SearchResponses, SetCustomerPriceData, SetCustomerPriceErrors, SetCustomerPriceResponses, SetRoleData, SetRoleErrors, SetRoleResponses, SignupData, SignupErrors, SignupResponses, StageCorrectionData, StageCorrectionErrors, StageCorrectionResponses, StageInvoiceData, StageInvoiceErrors, StageInvoiceResponses, StageProfileData, StageProfileErrors, StageProfileResponses, SwitchOrgData, SwitchOrgErrors, SwitchOrgResponses, TraceData, TraceErrors, TraceResponses, UpdateCustomerData, UpdateCustomerErrors, UpdateCustomerResponses, UpdateOrgData, UpdateOrgErrors, UpdateOrgResponses, UpdateProductData, UpdateProductErrors, UpdateProductResponses, UploadData, UploadErrors, UploadResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -142,6 +142,35 @@ export const invitePreview = <ThrowOnError extends boolean = false>(options: Opt
  */
 export const inviteAccept = <ThrowOnError extends boolean = false>(options: Options<InviteAcceptData, ThrowOnError>): RequestResult<InviteAcceptResponses, InviteAcceptErrors, ThrowOnError> => (options.client ?? client).post<InviteAcceptResponses, InviteAcceptErrors, ThrowOnError>({
     url: '/api/invites/{token}/accept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get Profile
+ */
+export const getProfile = <ThrowOnError extends boolean = false>(options?: Options<GetProfileData, ThrowOnError>): RequestResult<GetProfileResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetProfileResponses, unknown, ThrowOnError>({ url: '/api/profile', ...options });
+
+/**
+ * Apply Profile
+ */
+export const applyProfile = <ThrowOnError extends boolean = false>(options: Options<ApplyProfileData, ThrowOnError>): RequestResult<ApplyProfileResponses, ApplyProfileErrors, ThrowOnError> => (options.client ?? client).post<ApplyProfileResponses, ApplyProfileErrors, ThrowOnError>({
+    url: '/api/profile',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stage Profile
+ */
+export const stageProfile = <ThrowOnError extends boolean = false>(options: Options<StageProfileData, ThrowOnError>): RequestResult<StageProfileResponses, StageProfileErrors, ThrowOnError> => (options.client ?? client).post<StageProfileResponses, StageProfileErrors, ThrowOnError>({
+    url: '/api/profile/stage',
     ...options,
     headers: {
         'Content-Type': 'application/json',

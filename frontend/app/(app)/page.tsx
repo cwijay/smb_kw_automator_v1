@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { Onboarding } from "@/components/desk/Onboarding";
 import { Dropzone } from "@/components/desk/Dropzone";
 import { Card, Empty, Pill, STATUS_TEXT, statusTone } from "@/components/ui";
 import { activity, dashboard, listDocuments, unwrap } from "@/lib/api";
@@ -32,6 +33,8 @@ const ACTION_TEXT: Record<string, string> = {
   "haccp.recorded": "HACCP log verified",
   "lot.allocated": "Lot shipped on an order",
   "ccp.created": "Control point added",
+  "batch.corrected": "Batch corrected",
+  "profile.updated": "Business profile updated",
   "field.corrected": "Field corrected",
   "customer.created": "Customer added",
   "product.created": "Product added",
@@ -69,6 +72,8 @@ export default function DeskPage() {
         <p className="text-sm text-muted">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Good to see you, {me.data?.name.split(" ")[0]}.</h1>
       </div>
+
+      <Onboarding />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Waiting for your review" value={d?.to_review ?? "–"} tone="carbon" />

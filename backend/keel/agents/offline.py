@@ -15,6 +15,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 ROUTES: list[tuple[str, str, dict[str, Any]]] = [
+    (r"\b(set ?up|get started|onboard\w*|what('?s| is) next|next step|getting started)\b", "onboarding_status", {}),
     (r"\b(trace|recall|who got|which customers)\b.*?\b(?P<lot>[a-z]{1,3}-?\d[\w-]*)", "trace_lot", {}),
     (r"\b(haccp|food safety|temperature|ccp|missing readings?|out of range)\b", "food_safety_status", {}),
     (r"\b(order|orders)\b.*\b(not|un)\s*-?invoiced|unbilled", "find_orders", {"status": "approved"}),
@@ -109,6 +110,14 @@ def _summarise(name: str, data: dict[str, Any]) -> str:
         if data["gaps"]:
             text += " Gaps: " + "; ".join(data["gaps"]) + "."
         return text
+    if name == "onboarding_status":
+        if data["next"] is None:
+            return "Setup is complete. Every onboarding step is done."
+        done = sum(s["done"] for s in data["steps"])
+        return (
+            f"{done} of {len(data['steps'])} setup steps done. One thing next: {data['next']['title']} "
+            f"(open {data['next']['where']})."
+        )
     if name == "food_safety_status":
         text = (
             f"Last {data['days']} days: {data['readings']} HACCP readings, {data['within_limits']} within limits, "

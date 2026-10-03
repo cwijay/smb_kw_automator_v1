@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     search_min_similarity: float = 0.25  # cosine floor for "similar meaning"
     search_fuzzy: float = 0.5  # pg_trgm word_similarity floor for "close spelling"
 
+    # Optional tracing (self-hosted Langfuse recommended: traces contain document text).
+    langfuse_public_key: str | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key: str | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
+
     ocr_enabled: bool = True
     max_upload_mb: int = 25
     low_confidence: float = 0.75

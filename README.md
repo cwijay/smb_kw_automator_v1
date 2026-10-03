@@ -25,7 +25,9 @@ Postgres holds everything. Row-level security isolates each business's data.
 | Corrections | Signed batch records are never edited. A correction is a new version that supersedes the old one, behind its own approval, with the reason on record; the old version stays readable and trace follows the latest. |
 | Lot trace | Recursive SQL from any lot: back to supplier lots, forward through batches to the orders and customers that received it, with trace gaps called out. Lots are allocated on order lines. |
 | Search | Every page Keel reads is searchable: exact words (Postgres full-text), misspellings and shorthand (pg_trgm), and with an OpenAI key similar meaning (pgvector, `text-embedding-3-small` at 512 dims), fused by reciprocal rank fusion. Vectors record their model; `keel reindex` re-embeds after a model change. |
+| Onboarding | A Desk checklist computed from real records: read one real paper first, then catalog, customers, control points and the business profile. The profile (year end, books, allergens) changes only through an approved diff. Ask Keel's `keel-onboard` and `keel-router` skills name one next step at a time. |
 | Ask Keel | A deepagents agent with skills (`backend/skills/`), shared rules, tenant memory, read-only tools and streamed answers. It works offline without API keys. |
+| Tracing | Optional Langfuse (self-hosted) for extraction and agent calls, tagged by org; off unless keys are set. |
 | Metering | The Desk shows token and page cost for every model call, per tenant. |
 
 ## Run it locally
