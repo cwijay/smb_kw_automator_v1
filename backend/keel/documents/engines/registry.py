@@ -15,7 +15,7 @@ def engine(name: str) -> Extractor:
     if name in ("luna", "gemini", "sol"):
         from keel.documents.engines.llm import LlmExtractor
 
-        model = {"luna": s.model_default, "gemini": s.model_vision_handwriting, "sol": s.model_tier4_sol}[name]
+        model = {"luna": s.model_luna, "gemini": s.model_vision_handwriting, "sol": s.model_tier4_sol}[name]
         return LlmExtractor(model)
     if name == "reducto":
         from keel.documents.engines.reducto import ReductoExtractor

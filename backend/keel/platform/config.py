@@ -31,16 +31,18 @@ class Settings(BaseSettings):
     invite_ttl_days: int = 7
 
     # "fake" runs a deterministic local extractor and agent (no API keys, used by tests/demo).
-    # "live" calls the model providers. "auto" picks live when OPENAI_API_KEY is set.
+    # "live" calls the model providers. "auto" picks live when OPENAI_API_KEY or GOOGLE_API_KEY is set.
     llm_mode: Literal["auto", "fake", "live"] = "auto"
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
     google_api_key: str | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
     fireworks_api_key: str | None = Field(default=None, validation_alias="FIREWORKS_API_KEY")
 
-    model_default: str = "openai:gpt-6-luna"
+    model_default: str = "openai:gpt-6-luna"  # Ask Keel agent
+    model_parser: str = "google_genai:gemini-3.8-flash"  # first-pass document extraction
     model_vision_handwriting: str = "google_genai:gemini-3.8-flash"
     model_reasoning: str = "fireworks:accounts/fireworks/models/glm-5p3"
     model_fallback: str = "openai:gpt-6-luna"
+    model_luna: str = "openai:gpt-6-luna"  # "luna" engine in parser evals
 
     # Tier 4: only for pages that still fail checks after the Gemini re-read. Off unless named here;
     # which one is decided per document type by `keel evals parsers`.
@@ -83,7 +85,7 @@ class Settings(BaseSettings):
             return False
         if self.llm_mode == "live":
             return True
-        return bool(self.openai_api_key)
+        return bool(self.openai_api_key or self.google_api_key)
 
     def api_key(self, provider: str) -> str | None:
         """Keys loaded from .env never reach os.environ, so clients must be handed them explicitly."""

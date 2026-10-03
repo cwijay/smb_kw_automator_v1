@@ -44,7 +44,7 @@ def default_extractor() -> Extractor:
         return FakeExtractor()
     from keel.documents.engines.llm import LlmExtractor
 
-    return LlmExtractor(s.model_default)
+    return LlmExtractor(s.model_parser)
 
 
 def escalation_extractors() -> list[Extractor]:
