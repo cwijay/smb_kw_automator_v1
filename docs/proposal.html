@@ -206,11 +206,12 @@ td code { font-size: .82em; }
 
 <div class="shell">
   <aside class="rail" aria-label="Contents">
-    <div class="brand">Keel <small>PROPOSAL v1.1</small></div>
+    <div class="brand">Keel <small>PROPOSAL v1.2</small></div>
     <p class="tag">Back-office OS for small businesses. Multi-tenant, skills-based, cost-routed.</p>
     <p class="toc-label">Contents</p>
     <ol class="toc" id="toc">
 <li><a href="#0-summary-for-the-impatient-vp" data-target="0-summary-for-the-impatient-vp"><span class="n">0</span><span>Summary for the impatient VP</span></a></li>
+<li><a href="#decisions-the-mvp-stack-on-a-zero-budget" data-target="decisions-the-mvp-stack-on-a-zero-budget"><span class="n">D</span><span>Decisions</span></a></li>
 <li><a href="#1-what-exists-today-and-the-gap" data-target="1-what-exists-today-and-the-gap"><span class="n">1</span><span>What exists today, and the gap</span></a></li>
 <li><a href="#2-the-customers-and-the-jobs-they-need-done" data-target="2-the-customers-and-the-jobs-they-need-done"><span class="n">2</span><span>The customers and the jobs they need done</span></a></li>
 <li><a href="#3-product-principles" data-target="3-product-principles"><span class="n">3</span><span>Product principles</span></a></li>
@@ -235,6 +236,7 @@ td code { font-size: .82em; }
       <summary><span>Contents</span><span class="cur" id="mcur">Overview</span></summary>
       <ol class="toc" id="mtoc">
 <li><a href="#0-summary-for-the-impatient-vp" data-target="0-summary-for-the-impatient-vp"><span class="n">0</span><span>Summary for the impatient VP</span></a></li>
+<li><a href="#decisions-the-mvp-stack-on-a-zero-budget" data-target="decisions-the-mvp-stack-on-a-zero-budget"><span class="n">D</span><span>Decisions</span></a></li>
 <li><a href="#1-what-exists-today-and-the-gap" data-target="1-what-exists-today-and-the-gap"><span class="n">1</span><span>What exists today, and the gap</span></a></li>
 <li><a href="#2-the-customers-and-the-jobs-they-need-done" data-target="2-the-customers-and-the-jobs-they-need-done"><span class="n">2</span><span>The customers and the jobs they need done</span></a></li>
 <li><a href="#3-product-principles" data-target="3-product-principles"><span class="n">3</span><span>Product principles</span></a></li>
@@ -254,16 +256,16 @@ td code { font-size: .82em; }
     </details>
 
     <header class="hero" id="top">
-      <div class="eyebrow"><span>Start-up proposal</span><span>v1.1</span><span>3 Oct 2026</span></div>
+      <div class="eyebrow"><span>Start-up proposal</span><span>v1.2</span><span>3 Oct 2026</span></div>
       <h1>Keel<em>.</em></h1>
       <p class="sub">The back-office operating system for small businesses. First verticals: ice-cream franchisees and children's day care.</p>
       <div class="stats" role="list">
-        <div class="stat" role="listitem"><div class="v">≤ $12</div><div class="k">AI + infra cost per location / month</div></div>
+        <div class="stat" role="listitem"><div class="v">$3–5</div><div class="k">AI + infra cost per location / month</div></div>
         <div class="stat" role="listitem"><div class="v">$99–249</div><div class="k">Price per location / month</div></div>
-        <div class="stat" role="listitem"><div class="v">~90%</div><div class="k">Target gross margin</div></div>
-        <div class="stat" role="listitem"><div class="v">$1.5–3</div><div class="k">Blended doc cost per 1,000 pages</div></div>
+        <div class="stat" role="listitem"><div class="v">$0–10</div><div class="k">Fixed infra per month during the pilot (free tiers)</div></div>
+        <div class="stat" role="listitem"><div class="v">$1–2</div><div class="k">Blended doc cost per 1,000 pages</div></div>
       </div>
-      <p class="stats-note">All four figures are estimates; see §7.1 and §4.4.</p>
+      <p class="stats-note">All four figures are estimates; see Decisions, §7.1 and §4.4.</p>
       <blockquote class="lede">
 <p><strong>What Keel is.</strong> Glean is a search engine over a company's knowledge. Keel is different: it is a <em>bookkeeper, compliance officer and operations clerk</em> for businesses with 1–50 staff.</p>
 <p>Keel is built as a coding agent that uses skills. It:</p>
@@ -306,11 +308,11 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td><strong>Cost target</strong></td>
-<td>≤ <strong>$12 per location per month</strong> in AI and infrastructure cost (estimate), against a price of <strong>$99–249 per location per month</strong>. That is a gross margin above 90%.</td>
+<td>About <strong>$3–5 per location per month</strong> in AI and infrastructure (estimate, §7.1), against a price of <strong>$99–249 per location per month</strong>. Gross margin is above 95%. The pilot runs on free tiers, so fixed infrastructure costs <strong>$0–10 a month</strong>.</td>
 </tr>
 <tr>
 <td><strong>Stack</strong></td>
-<td>deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector), BM25 keyword search (pg_textsearch) and the context graph (typed edge tables and recursive CTEs), so there is no separate graph database. Everything runs on Cloud SQL (see the <a href="tech_deep_dive.html">technical deep-dive</a>). Model access goes through OpenRouter with our own keys, routed by tier.</td>
+<td>deepagents 0.7 on LangGraph that we run ourselves (FastAPI, Postgres checkpointer), and Next.js. <strong>One Postgres</strong> holds tenant isolation (row-level security), pgvector, full-text search, the context graph (edge tables) and the semantic layer. <strong>GPT-6 Luna</strong> is the default model, with Gemini 3.8 Flash for handwriting and GLM-5.3 for coding and hard reasoning. Embeddings use <strong>text-embedding-3-small</strong>. Hosting: Cloud Run plus Neon Postgres on free tiers. See <em>Decisions</em> below.</td>
 </tr>
 <tr>
 <td><strong>First 90 days</strong></td>
@@ -318,6 +320,345 @@ td code { font-size: .82em; }
 </tr>
 </tbody>
 </table></div>
+<hr />
+</section>
+<section class="sec" id="sec-decisions-the-mvp-stack-on-a-zero-budget" aria-labelledby="decisions-the-mvp-stack-on-a-zero-budget"><h2 id="decisions-the-mvp-stack-on-a-zero-budget">Decisions: the MVP stack on a zero budget</h2>
+<p>These are the conclusions from the research in this proposal and the <a href="tech_deep_dive.html">technical deep-dive</a>.</p>
+<p><strong>Selection rule:</strong> pick the cheapest option that passes the gold-set eval, with no fixed monthly fees and no lock-in that would block a later swap.</p>
+<p><strong>Price caveat:</strong> prices are as of 3 Oct 2026, mostly from third-party sources. <strong>[U]</strong> marks one we could not confirm on the vendor's own page.</p>
+<h3 id="d1-document-parser-keep-your-gemini-parser-make-it-provider-agnostic-default-to-gpt-6-luna">D1. Document parser: keep your Gemini parser, make it provider-agnostic, default to GPT-6 Luna</h3>
+<p><strong>Cost per 1,000 scanned A4 pages</strong> (~800 output tokens each, batch pricing):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Price per 1M tokens (in / out)</th>
+<th>Batch, per 1k pages</th>
+<th>Standard, per 1k pages</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GPT-6 Luna</strong> (<code>reasoning.effort=none</code>)</td>
+<td>$0.10 / $0.50</td>
+<td><strong>≈ $0.37</strong></td>
+<td>≈ $0.70</td>
+<td><strong>Default</strong> for printed scans, photos and JSON extraction</td>
+</tr>
+<tr>
+<td>Gemini 3.8 Flash (thinking LOW, <code>media_resolution</code> MEDIUM)</td>
+<td>$0.75 / $3.75, <strong>doubling to $1.50 / $7.50 on 1 Jan 2027</strong></td>
+<td>≈ $2.60 (≈ $5.20 in 2027)</td>
+<td>≈ $5 (≈ $10)</td>
+<td>Handwriting re-reads only, until Luna proves it can do them</td>
+</tr>
+<tr>
+<td>GPT-5.6 Terra</td>
+<td>$2.00 / $12.00</td>
+<td>≈ $7.80</td>
+<td>≈ $15.60</td>
+<td><strong>Rejected.</strong> Older generation, about 20× Luna's price, and GPT-6 Sol ($2 / $10) beats it on price</td>
+</tr>
+<tr>
+<td>GPT-6 Sol</td>
+<td>$2.00 / $10.00</td>
+<td>≈ $6.50</td>
+<td>≈ $13</td>
+<td>Escalation only, for single hard fields</td>
+</tr>
+<tr>
+<td>LandingAI ADE Gen2 (DPT-3 Pro)</td>
+<td>per page</td>
+<td>≈ $10–15 (async tier)</td>
+<td>≈ $20–30</td>
+<td>Pay-per-use tier 4 for <strong>critical handwritten fields</strong> only, if it wins on the gold set</td>
+</tr>
+<tr>
+<td>LiteParse</td>
+<td>free</td>
+<td>$0</td>
+<td>$0</td>
+<td>Tier 0 for born-digital PDFs. <strong>It cannot read handwriting.</strong></td>
+</tr>
+<tr>
+<td>PP-OCRv5 on CPU</td>
+<td>free</td>
+<td>≈ $0.04 of CPU</td>
+<td>–</td>
+<td>Tier 1. Word <strong>bounding boxes</strong> give pixel-level evidence for free</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How the parser works</strong></p>
+<ul>
+<li>Each page is routed on its own:<ol>
+<li><strong>text layer</strong> (LiteParse);</li>
+<li><strong>CPU OCR</strong> (PP-OCRv5): words and boxes;</li>
+<li><strong>Luna</strong>: page image plus OCR text, returning JSON against a pydantic schema;</li>
+<li><strong>validators</strong>;</li>
+<li><strong>Gemini 3.8 Flash</strong> re-read, for handwriting or low confidence;</li>
+<li><strong>ADE or GPT-6 Sol</strong>, on cropped critical fields;</li>
+<li><strong>human review</strong>.</li>
+</ol>
+</li>
+<li><strong>Grounding:</strong> each value Luna extracts is matched to its OCR word boxes by fuzzy string match. This gives pixel evidence without paying for a grounding API.</li>
+</ul>
+<p><strong>Fixes needed in <code>gemini_parse_util.py</code></strong> (deep-dive §1.3):</p>
+<ol>
+<li>Process page by page, not whole documents.</li>
+<li>Use JSON-schema output.</li>
+<li>Set <code>thinking_level=LOW</code> and <code>media_resolution</code>.</li>
+<li>Use the Batch API.</li>
+<li>Log <code>usage_metadata</code> (token counts per call).</li>
+<li>Drop <code>temperature=0.1</code>.</li>
+<li>Use the native async client.</li>
+</ol>
+<p><strong>No self-hosted GPU OCR in the MVP.</strong> A fully used L4 only matches Luna's batch price, and we have no GPU budget. GLM-OCR or PaddleOCR-VL stay as local dev tools, and a Cloud Run GPU job can come later.</p>
+<h3 id="d2-llms-one-cheap-default-two-escalation-tiers-no-kimi-k3-or-terra">D2. LLMs: one cheap default, two escalation tiers, no Kimi K3 or Terra</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Model (provider)</th>
+<th>Price per 1M (in / out)</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Default for everything</strong>: supervisor, chat, classification, extraction, summaries</td>
+<td><strong>GPT-6 Luna</strong> (OpenAI)</td>
+<td>$0.10 / $0.50 (cached input $0.01; Batch $0.05 / $0.25)</td>
+<td>Cheapest Western frontier model with 1M context and tools. Start with <code>effort=none</code> and raise per task only when evals require it.</td>
+</tr>
+<tr>
+<td><strong>Overnight bulk text</strong> (LightRAG extraction, the distiller, summaries)</td>
+<td><strong>GPT-6 Luna Batch</strong></td>
+<td>$0.05 / $0.25</td>
+<td>Cheaper than DeepSeek V4.1 Flash off-peak ($0.15 / $0.60)</td>
+</tr>
+<tr>
+<td><strong>Hard reasoning and coding</strong> (recipe engineer, contract review, tax-pack review)</td>
+<td><strong>GLM-5.3</strong> (Fireworks or Z.ai)</td>
+<td>$1.40 / $4.40 (cached $0.26)</td>
+<td>Strongest open-weights agentic model, cheaper than GPT-6 Sol. Runs rarely, and recipes spread the cost over every later run. Use the global Fireworks endpoint; the US-only one costs 1.5×.</td>
+</tr>
+<tr>
+<td><strong>Handwriting vision</strong></td>
+<td><strong>Gemini 3.8 Flash</strong> (Google)</td>
+<td>$0.75 / $3.75 → $1.50 / $7.50</td>
+<td>Best evidence on handwriting among cheap models. Re-evaluate against Luna before 1 Jan 2027.</td>
+</tr>
+<tr>
+<td><strong>Fallback if OpenAI is down</strong></td>
+<td><strong>DeepSeek V4.1 Flash</strong> (DeepSeek first-party, off-peak) or V4 Flash on Fireworks ($0.22 / $0.66)</td>
+<td>$0.15 / $0.60 off-peak</td>
+<td>Cheap, and not OpenAI. Text only.</td>
+</tr>
+<tr>
+<td>Rejected for the MVP</td>
+<td>Kimi K3 ($3 / $15), GPT-5.6 Terra ($2 / $12)</td>
+<td>–</td>
+<td>Too expensive for what they add. Kimi K2.6 ($0.95 / $4) is an option if a multimodal open model is needed.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Plumbing</strong></p>
+<ul>
+<li>Call providers directly through LangChain <code>init_chat_model</code> / LiteLLM. Fireworks gives no credits to bootstrapped companies, and OpenRouter adds a card fee.</li>
+<li>A <code>BudgetMiddleware</code> per tenant logs every call (tenant, model, tokens, $).</li>
+</ul>
+<h3 id="d3-embeddings-openai-text-embedding-3-small-truncated-to-512-dimensions">D3. Embeddings: OpenAI <code>text-embedding-3-small</code>, truncated to 512 dimensions</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Price per 1M</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>text-embedding-3-small</strong></td>
+<td><strong>$0.02 (batch $0.01)</strong></td>
+<td><strong>Chosen.</strong> Use <code>dimensions=512</code>, stored as <code>halfvec(512)</code>. 500k pages cost about <strong>$3</strong> to embed.</td>
+</tr>
+<tr>
+<td>gemini-embedding-001 / 2</td>
+<td>$0.15 / $0.20</td>
+<td>Better on MTEB, but 7–20× the price</td>
+</tr>
+<tr>
+<td>Qwen3-Embedding-0.6B, EmbeddingGemma-300M</td>
+<td>Free (self-host on CPU)</td>
+<td>Upgrade path for data sovereignty or quality; same pgvector schema</td>
+</tr>
+</tbody>
+</table></div>
+<p>Embeddings matter less than usual here, because <strong>invoices are answered from SQL over extracted fields</strong>. Vectors serve the free text: contracts, SOPs, notes and emails.</p>
+<h3 id="d4-hybrid-multi-tenant-search-postgres-pgvector-built-in-full-text-protected-by-rls">D4. Hybrid, multi-tenant search: Postgres pgvector + built-in full-text, protected by RLS</h3>
+<p>Replace the Gemini File Search store. Its 10-stores-per-project cap [U] breaks the one-store-per-organisation design, isolation would rest on a metadata filter, and it brings lock-in and no region choice.</p>
+<p><strong>Schema</strong></p>
+<div class="code-wrap"><pre><code class="language-sql">chunks(tenant_id, doc_id, page, section, text, tsv tsvector, emb halfvec(512))
+  -- RLS: tenant_id = current_setting('app.tenant_id')
+  -- HNSW on emb (pgvector 0.8 iterative scans for filtered queries)
+  -- GIN on tsv
+</code></pre></div>
+<p><strong>Query path</strong></p>
+<ol>
+<li><strong>SQL first.</strong> Structured fields answer exact questions (amounts, dates, invoice and lot numbers).</li>
+<li><strong>Hybrid</strong> for free text: vector top-k plus <code>ts_rank_cd</code> full-text top-k, combined with <strong>reciprocal rank fusion</strong> in one SQL statement.</li>
+<li><strong>Graph expansion</strong> (D5) for linked context.</li>
+<li><strong>Agentic file reading</strong> for long documents: the deepagents filesystem, which reads tables of contents and pages.</li>
+</ol>
+<p><strong>Why built-in full-text instead of a BM25 extension</strong></p>
+<ul>
+<li>Portable on every host: Neon retired <code>pg_search</code>, Supabase lacks <code>pg_textsearch</code>, and Cloud SQL's support is only in preview.</li>
+<li>Upgrade to true BM25 (<code>pg_textsearch</code>) when we move to a host that offers it.</li>
+</ul>
+<h3 id="d5-graph-rag-yes-as-two-graphs-inside-postgres-with-no-graph-database-in-the-mvp">D5. Graph RAG: yes, as two graphs inside Postgres, with no graph database in the MVP</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Graph</th>
+<th>What it holds</th>
+<th>How it is built</th>
+<th>Store</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Context graph</strong></td>
+<td>Entities extracted from documents: vendor, invoice, PO, delivery, lot, staff, certification, obligation, location</td>
+<td><strong>Deterministically</strong> from validated extraction (no LLM cost; auditable)</td>
+<td><code>entities</code> + <code>edges(tenant_id, src, rel, dst, valid_from, valid_to, provenance)</code>; recursive CTEs for 1–4 hops; RLS</td>
+</tr>
+<tr>
+<td><strong>Document knowledge graph</strong></td>
+<td>Concepts and obligations in free text: contracts, SOPs, policies, inspection reports</td>
+<td><strong>LightRAG</strong> with its PostgreSQL backend: <strong><code>PGTableGraphStorage</code></strong> (plain tables, <strong>no Apache AGE</strong>), PGVector and PGKV, with <code>workspace = tenant_id</code>. Entity extraction runs on <strong>Luna Batch</strong>.</td>
+<td>The same Neon Postgres. Add RLS on LightRAG's tables keyed by workspace, because its own isolation is enforced only in application code.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Graph databases other than Neo4j, if we outgrow Postgres</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Licence</th>
+<th>Cost</th>
+<th>Multi-tenant</th>
+<th>Use when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FalkorDB</strong></td>
+<td>SSPL (fine for our SaaS; we don't resell the database)</td>
+<td>Self-host free; cloud from $73/mo</td>
+<td><strong>Native graph per tenant</strong> (10k+ graphs)</td>
+<td><strong>First choice</strong> if we need fast multi-hop queries or Graphiti temporal agent memory</td>
+</tr>
+<tr>
+<td>Neo4j</td>
+<td>GPL Community / commercial</td>
+<td>VM about $25–50/mo; Aura from $65/GB-mo</td>
+<td>Enterprise only (free Startup Program, small companies)</td>
+<td>You already have the skills; deep Cypher tooling</td>
+</tr>
+<tr>
+<td>Memgraph</td>
+<td>BSL; multi-tenancy in Enterprise</td>
+<td>Community free</td>
+<td>Enterprise</td>
+<td>In-memory analytics</td>
+</tr>
+<tr>
+<td>ArangoDB / SurrealDB</td>
+<td>BSL 1.1</td>
+<td>Self-host free</td>
+<td>Databases or namespaces per tenant</td>
+<td>Multi-model needs; check BSL terms</td>
+</tr>
+<tr>
+<td>LadybugDB (Kuzu fork)</td>
+<td>MIT</td>
+<td>Free, embedded</td>
+<td>One file per tenant</td>
+<td>Embedded experiments only</td>
+</tr>
+<tr>
+<td>Spanner Graph</td>
+<td>Proprietary</td>
+<td>≈ $65+/mo</td>
+<td>Schema per tenant</td>
+<td>Only if we were on GCP credits</td>
+</tr>
+<tr>
+<td>Apache AGE</td>
+<td>Apache-2.0</td>
+<td>Free, <strong>self-host only</strong> (not on Cloud SQL, Neon or Supabase)</td>
+<td>Graph per tenant</td>
+<td>Only if we self-host Postgres</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Rule.</strong> Graph access goes through a repository interface (<code>neighbors</code>, <code>trace_lot</code>, <code>find_paths</code>, <code>doc_graph_query</code>). Postgres stays the source of truth, and any graph database is a projection that can be rebuilt from it. Neo4j or FalkorDB on a small VM never runs on Cloud Run (deep-dive §5.6).</p>
+<h3 id="d6-semantic-layer-governed-metric-yaml-in-osi-format-compiled-to-sql-by-our-own-small-compiler">D6. Semantic layer: governed metric YAML in OSI format, compiled to SQL by our own small compiler</h3>
+<p><strong>The pieces</strong></p>
+<ul>
+<li><strong>Definitions.</strong> Metrics, dimensions and entities live as YAML in each Vertical Pack, using the <strong>OSI (Open Semantic Interchange)</strong> format. Examples: <code>food_cost_pct</code>, <code>royalty_due</code>, <code>ratio_compliance_rate</code>, <code>revenue_per_child</code>.</li>
+<li><strong>Catalog.</strong> At deploy time they load into a <code>semantic</code> schema in Postgres, with embeddings for discovery.</li>
+<li><strong>Agent tools:</strong><ul>
+<li><code>search_context</code> finds metrics and entities using hybrid search plus graph neighbours;</li>
+<li><code>run_metric</code> compiles the YAML to parameterised SQL. The tenant comes from the JWT, RLS applies, and an SQL guard checks the query (ported from Prism);</li>
+<li><code>get_evidence</code> returns the fields and page boxes behind any number.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Not in the MVP</strong></p>
+<ul>
+<li><strong>Cube or dbt MetricFlow:</strong> an extra service and extra cost.</li>
+<li><strong>neocarta or Neo4j for the catalog:</strong> an extra database for a few hundred rows.</li>
+</ul>
+<p>Because the YAML is in OSI format, neocarta or Cube can read it later for free.</p>
+<h3 id="d7-hosting-with-no-credits">D7. Hosting with no credits</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Stack</th>
+<th>Fixed cost per month</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Build (now)</strong></td>
+<td>Laptop docker-compose: Postgres 17 + pgvector, MinIO, FastAPI/LangGraph, Next.js. Optional Ollama with GLM-OCR for experiments.</td>
+<td><strong>$0</strong> (plus API tokens for evals, about $5–20)</td>
+</tr>
+<tr>
+<td><strong>Pilot (≤ 10 locations)</strong></td>
+<td><strong>Cloud Run</strong> free tier (API, worker; recipe sandbox as Cloud Run <strong>jobs</strong>, which are gVisor-isolated and have no secrets mounted). <strong>Neon Free</strong> Postgres (pgvector; 1 GB per project; scales to zero). <strong>Cloudflare R2</strong> (10 GB free) for documents. <strong>LangSmith Developer</strong> (5k traces free) or Langfuse Cloud free tier. Clerk free tier or Auth.js.</td>
+<td><strong>≈ $0–10</strong></td>
+</tr>
+<tr>
+<td><strong>Paying (10–100 locations)</strong></td>
+<td>The same, on paid usage: Cloud Run usage, a Neon paid plan <strong>or</strong> Cloud SQL <code>db-g1-small</code>, R2 beyond 10 GB</td>
+<td><strong>≈ $30–80</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Hosts to avoid</strong></p>
+<ul>
+<li>Supabase Free: pauses after 7 days idle.</li>
+<li>Hetzner: its cheap plans are gone, and the smallest available server now costs about €19.</li>
+<li>Always-on GPUs.</li>
+<li>Managed graph databases.</li>
+</ul>
+<p><strong>AI spend per location</strong> is about $3–5 a month (§7.1). It is covered from the first paying customer.</p>
 <hr />
 </section>
 <section class="sec" id="sec-1-what-exists-today-and-the-gap" aria-labelledby="1-what-exists-today-and-the-gap"><h2 id="1-what-exists-today-and-the-gap">1. What exists today, and the gap</h2>
@@ -582,16 +923,16 @@ td code { font-size: .82em; }
     W[WhatsApp Business / SMS] --&gt; Q
     E[Email forward: bills@tenant.keel.app] --&gt; Q
     C[Connectors: QBO, Xero, Square, Toast, Brightwheel, Gusto, Drive] --&gt; Q
-    Q[(Intake queue - pgmq)]
+    Q[(Intake queue - Postgres table)]
   end
 
   subgraph DocPipe[&quot;Document Intelligence Pipeline (tiered, cost-routed)&quot;]
-    T0[Tier 0 triage: text-layer? LiteParse/pdfium] --&gt; T1[Tier 1 OSS OCR: PaddleOCR-VL-1.5 / GLM-OCR + bboxes]
-    T1 --&gt; T2[Tier 2 cheap LLM -&gt; JSON schema: GPT-6 Luna / DeepSeek V4.1 Flash]
+    T0[Tier 0 triage: text-layer? LiteParse/pdfium] --&gt; T1[Tier 1 CPU OCR: PP-OCRv5 words + bboxes]
+    T1 --&gt; T2[Tier 2 GPT-6 Luna: page image + OCR text -&gt; JSON schema]
     T2 --&gt; V{Deterministic validators: totals, tax, dates, vendor master, dupes, bank-detail change}
     V -- fail / low conf --&gt; T3[Tier 3 VLM re-read: Gemini 3.8 Flash]
     T3 --&gt; V2{validate}
-    V2 -- fail / handwriting critical --&gt; T4[Tier 4 ADE DPT-3 Pro / Reducto]
+    V2 -- fail / handwriting critical --&gt; T4[Tier 4 ADE DPT-3 Pro or GPT-6 Sol on cropped fields]
     T4 --&gt; HQ[Human review queue with bbox overlay]
     V -- pass --&gt; R
     V2 -- pass --&gt; R
@@ -601,7 +942,7 @@ td code { font-size: .82em; }
   subgraph Core[&quot;Tenant Core (Postgres + RLS)&quot;]
     EV[(Evidence store: docs, pages, fields, bboxes, confidence)]
     LG[(Ledger: entities, txns, journals per location)]
-    CG[(Context graph: edge tables + recursive CTEs + pgvector)]
+    CG[(Context graph: edge tables + LightRAG doc graph + pgvector)]
     SL[Semantic layer: governed metrics YAML]
     OB[(Obligations: contracts, certs, deadlines, ratios, temp limits)]
     TR[(Agent traces + decisions audit)]
@@ -612,7 +953,7 @@ td code { font-size: .82em; }
     SUP --&gt; SA1[Bookkeeper subagent]
     SUP --&gt; SA2[Compliance subagent]
     SUP --&gt; SA3[Analyst / chat subagent]
-    SUP --&gt; SA4[Recipe engineer - coding subagent in sandbox]
+    SUP --&gt; SA4[Recipe engineer - GLM-5.3, Cloud Run job sandbox]
     SUP --&gt; SA5[Reporter: tax pack, royalty, binder]
     GATES[LangGraph gates: interrupts + Postgres checkpointer]
   end
@@ -673,7 +1014,7 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>Sandbox</td>
-<td>One ephemeral sandbox per run, with no network and a read-only upload mount (from recon v2's <code>docker_backend.py</code>). In production, use Modal, Daytona or E2B so it scales to zero.</td>
+<td>One ephemeral sandbox per run, with no network and a read-only upload mount (from recon v2's <code>docker_backend.py</code>). In production, use a Cloud Run <strong>job</strong> per recipe run (gVisor-isolated, scales to zero, no secrets mounted).</td>
 </tr>
 <tr>
 <td>Encryption</td>
@@ -708,7 +1049,7 @@ td code { font-size: .82em; }
 <tr>
 <th>Tier</th>
 <th>When</th>
-<th>Engine</th>
+<th>Engine (MVP)</th>
 <th>≈ cost per page</th>
 </tr>
 </thead>
@@ -722,25 +1063,25 @@ td code { font-size: .82em; }
 <tr>
 <td>1</td>
 <td>Scans and photos</td>
-<td><strong>PaddleOCR-VL-1.5</strong> (Apache-2.0, OmniDocBench v1.5 94.5) or <strong>GLM-OCR</strong> (MIT, 0.9B; API ≈ $0.10 per 1k pages). Both return bounding boxes.</td>
-<td>$0.0001–0.0005</td>
+<td><strong>PP-OCRv5 on CPU</strong> (in the worker container): words and bounding boxes. Later: GLM-OCR or PaddleOCR-VL as a Cloud Run GPU job, when volume justifies it.</td>
+<td>~$0.00004</td>
 </tr>
 <tr>
 <td>2</td>
-<td>OCR text → typed JSON (<code>Invoice</code>, <code>DeliveryNote</code>, <code>Timesheet</code>, <code>TempLog</code>, <code>MealCount</code>, …)</td>
-<td><strong>GPT-6 Luna</strong> ($0.10/$0.50 per M tokens), or <strong>DeepSeek V4.1 Flash</strong> off-peak ($0.15/$0.60)</td>
-<td>$0.0003–0.001</td>
+<td>Page → typed JSON (<code>Invoice</code>, <code>DeliveryNote</code>, <code>Timesheet</code>, <code>TempLog</code>, <code>MealCount</code>, …)</td>
+<td><strong>GPT-6 Luna</strong> (page image + OCR text, <code>effort=none</code>, Batch, pydantic schema). Values are matched back to OCR boxes for evidence.</td>
+<td>$0.0004–0.0007</td>
 </tr>
 <tr>
 <td>3</td>
-<td>A validator fails, a field's confidence is low, or handwriting is detected</td>
-<td><strong>Gemini 3.8 Flash</strong> with the page image (Batch/Flex is half price; the price <strong>doubles on 1 Jan 2027</strong>, so budget for $1.50/$7.50)</td>
-<td>$0.002–0.006</td>
+<td>A validator fails, confidence is low, or handwriting is detected</td>
+<td><strong>Gemini 3.8 Flash</strong> (thinking LOW, <code>media_resolution</code> per part, Batch). The price <strong>doubles on 1 Jan 2027</strong>.</td>
+<td>$0.0025–0.005 (2027: $0.005–0.01)</td>
 </tr>
 <tr>
 <td>4</td>
 <td>Still failing, or a critical handwritten field (amount, date, signature)</td>
-<td><strong>LandingAI ADE Gen2, DPT-3 Pro</strong> (handwriting, line-level grounding; about 2–3¢ priority, about half on the standard async tier), or <strong>Reducto</strong> Extract (2¢)</td>
+<td><strong>LandingAI ADE Gen2 DPT-3 Pro</strong> (async tier, grounded) <strong>or GPT-6 Sol</strong> on the cropped field: whichever wins the gold set. Pay per use only.</td>
 <td>$0.01–0.03</td>
 </tr>
 <tr>
@@ -751,7 +1092,7 @@ td code { font-size: .82em; }
 </tr>
 </tbody>
 </table></div>
-<p><strong>Blended estimate:</strong> <strong>$1.5–3 per 1,000 pages</strong>, assuming 70% stop at tiers 0–2, 25% at tier 3 and 5% at tier 4. Sending every page to a premium API would cost $6–40 per 1,000.
+<p><strong>Blended estimate:</strong> about <strong>$1–2 per 1,000 pages</strong>, assuming 70% stop at tiers 0–2, 25% at tier 3 and 5% at tier 4. Sending every page to a premium API would cost $10–40 per 1,000.
 <strong>After recipes compile</strong>, a returning supplier layout skips tier 2: the recipe maps OCR boxes to fields deterministically. The marginal cost of an extraction then approaches the OCR cost alone.</p>
 <p><strong>Deterministic validators</strong> form a library shared by all packs, each with its own error code. Every invoice gets these checks:</p>
 <ul>
@@ -770,7 +1111,7 @@ td code { font-size: .82em; }
 </ul>
 <p>Also assume most small-business scans have <strong>no text layer</strong>: phone photos and photocopied forms go straight to tier 1 OCR. Validators need handwriting-specific rules for grouped prices, crossed-out lines, circled totals and tick marks.</p>
 <h3 id="45-semantic-layer-and-context-graph-the-per-tenant-business-brain">4.5 Semantic layer and context graph: the per-tenant "business brain"</h3>
-<p>This part is adapted from <code>edm_sementic_layer_v3.0</code> (Prism). The big change is that the graph lives in <strong>plain Postgres instead of Neo4j</strong>. It is stored as typed tables plus a generic <code>edges(tenant_id, src, rel, dst, valid_from, valid_to, provenance)</code> table, with recursive CTEs for 1–4 hop traversals and pgvector next to it. Apache AGE was dropped because it is not offered on Cloud SQL or AlloyDB. The result is one managed database, native row-level security, and low cost. Graph access sits behind a repository interface (<code>neighbors</code>, <code>trace_lot</code>, <code>find_paths</code>), so a Neo4j or Spanner Graph projection can be added later without rewriting agents. See the <a href="tech_deep_dive.html">technical deep-dive §5</a>.</p>
+<p>This part is adapted from <code>edm_sementic_layer_v3.0</code> (Prism). The final MVP choices are in <em>Decisions</em> D4–D6. The big change is that the graph lives in <strong>plain Postgres instead of Neo4j</strong>. It is stored as typed tables plus a generic <code>edges(tenant_id, src, rel, dst, valid_from, valid_to, provenance)</code> table, with recursive CTEs for 1–4 hop traversals and pgvector next to it. Apache AGE was dropped because it is not offered on Cloud SQL, AlloyDB, Neon or Supabase. The result is one managed database, native row-level security, and low cost. Graph access sits behind a repository interface (<code>neighbors</code>, <code>trace_lot</code>, <code>find_paths</code>), so a Neo4j or Spanner Graph projection can be added later without rewriting agents. See the <a href="tech_deep_dive.html">technical deep-dive §5</a>.</p>
 <p><strong>Ontology (core plus pack extensions)</strong></p>
 <div class="table-wrap"><table>
 <thead>
@@ -805,7 +1146,13 @@ td code { font-size: .82em; }
 </code></pre></div>
 <p>This is what "link data between different invoices" means in practice: price-drift alerts per supplier and SKU, missing credit notes, contract price compared with billed price, and so on.</p>
 <p><strong>Governed metrics</strong> are YAML files in the pack, for example <code>food_cost_pct</code>, <code>royalty_due</code>, <code>ratio_compliance_rate</code>, <code>occupancy</code>, <code>revenue_per_child</code>, <code>labour_pct</code>. The analyst agent calls <code>run_metric</code> and never hand-writes SQL. The same metric definitions drive the dashboards, the chat answers and the reports, so the numbers always agree.</p>
-<p><strong>Hybrid retrieval</strong> combines vector search, BM25 (keyword ranking) and graph expansion. It returns a context pack of about 3k tokens, the same pattern as Prism's <code>retrieval.py</code> and its <code>gate()</code> filter.</p>
+<p><strong>Hybrid retrieval</strong> works in this order:</p>
+<ol>
+<li>SQL over extracted fields;</li>
+<li>vector search (<code>text-embedding-3-small</code>, <code>halfvec(512)</code>) plus Postgres full-text, fused with reciprocal rank fusion (RRF);</li>
+<li>graph expansion over the context graph and the LightRAG document graph.</li>
+</ol>
+<p>It returns a context pack of about 3k tokens, the same pattern as Prism's <code>retrieval.py</code> and its <code>gate()</code> filter. All of it runs under the tenant's RLS.</p>
 <p><strong>Agent trace memory</strong> stores <code>(:Trace)-[:HAS_STEP]-&gt;(:ToolCall)-[:TOUCHED]-&gt;(:Ctx)</code> for every run, owned by the tenant and kept for a set period. Traces power three things: explaining any answer ("why is this coded to Repairs?"), debugging, and the learning loop.</p>
 <h3 id="46-connectors">4.6 Connectors</h3>
 <p>Connectors use MCP first, with a deterministic fallback.</p>
@@ -942,7 +1289,8 @@ td code { font-size: .82em; }
 <hr />
 </section>
 <section class="sec" id="sec-7-models-cheapest-option-that-passes-the-eval" aria-labelledby="7-models-cheapest-option-that-passes-the-eval"><h2 id="7-models-cheapest-option-that-passes-the-eval">7. Models: cheapest option that passes the eval</h2>
-<p><strong>Name checks</strong> (as of 3 Oct 2026; please re-check prices on vendor pages, because most figures came from aggregators):</p>
+<p>The final routing is in <strong>Decisions D1–D3</strong>.</p>
+<p><strong>Name checks</strong> (as of 3 Oct 2026; re-check prices on vendor pages, because most figures came from aggregators):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -953,76 +1301,41 @@ td code { font-size: .82em; }
 <tbody>
 <tr>
 <td>GLM 5.3</td>
-<td>✅ <strong>GLM-5.3</strong> (Z.ai), 14 Aug 2026. About 750B mixture-of-experts with ~40B active, 1M context. #1 open-weights model on the Artificial Analysis index. API about $1.40/$4.40 per M tokens.</td>
+<td>✅ <strong>GLM-5.3</strong> (Z.ai), released 14 Aug 2026. Mixture-of-experts, about 750B total with ~40B active; 1M context. #1 open-weights model on the Artificial Analysis index. $1.40 / $4.40 on Z.ai and Fireworks (global).</td>
 </tr>
 <tr>
 <td>Kimi K3</td>
-<td>✅ <strong>Kimi K3</strong> (Moonshot), 16 Jul 2026. 2.8T total / 104B active, open weights. <strong>Not cheap: $3/$15.</strong> Use it sparingly.</td>
+<td>✅ <strong>Kimi K3</strong> (Moonshot), released 16 Jul 2026. Multimodal, 2.8T parameters. <strong>$3 / $15</strong>, which is too expensive for the MVP.</td>
+</tr>
+<tr>
+<td>DeepSeek V4 Flash</td>
+<td>✅ V4 Flash on Fireworks costs $0.22 / $0.66. <strong>V4.1 Flash</strong> direct from DeepSeek costs $0.15 / $0.60 off-peak (peak is 2×). Text only.</td>
 </tr>
 <tr>
 <td>Gemini 3.8 Flash</td>
-<td>✅ Released 2 Sep 2026. $0.75/$3.75 at an <strong>introductory price that doubles on 1 Jan 2027</strong> (unverified). There is no 3.8 Flash-Lite text model; the cheapest text model is 3.5 Flash-Lite.</td>
+<td>✅ Released 2 Sep 2026. $0.75 / $3.75, an <strong>introductory price that doubles on 1 Jan 2027</strong>. Thinking cannot be switched off; the lowest setting is LOW.</td>
 </tr>
 <tr>
-<td>GPT 6.1 Luna</td>
-<td>❌ Does not exist. You probably mean <strong>GPT-6 Luna</strong> ($0.10/$0.50, 1M context, 22 Sep 2026). GPT-6.1 shipped only as <em>Sol</em> ($2/$10).</td>
-</tr>
-</tbody>
-</table></div>
-<p><strong>Routing table (starting point; the eval harness decides the final choice)</strong></p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Role</th>
-<th>Primary</th>
-<th>Fallback</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Classification, extraction → JSON, summaries, notifications</td>
 <td>GPT-6 Luna</td>
-<td>DeepSeek V4.1 Flash (off-peak batch), Qwen3.5 Flash</td>
-<td>High volume, schema-constrained, cheap</td>
+<td>✅ Released 22 Sep 2026. $0.10 / $0.50, Batch $0.05 / $0.25, 1M context, reasoning can be set to <code>none</code>. A vision bug was fixed on 25 Sep, so ignore evals run before then. (There is no "GPT-6.1 Luna".)</td>
 </tr>
 <tr>
-<td>Supervisor, tool-calling chat, bookkeeping reasoning</td>
-<td>GLM-5.3 (or GLM-5.2 on DeepInfra at about $0.75/$2.40)</td>
-<td>Gemini 3.8 Flash, DeepSeek V4 Pro off-peak</td>
-<td>Strong tool calling (GLM-5.2 scores 99.1 on τ²-bench); open weights allow self-hosting later</td>
-</tr>
-<tr>
-<td>Page parsing (printed scans)</td>
-<td>GPT-6 Luna, <code>reasoning.effort=none</code>, Batch</td>
-<td>Gemini 3.8 Flash (thinking LOW, media_resolution MEDIUM)</td>
-<td>Luna is about 7–14× cheaper per page; Gemini's price doubles on 1 Jan 2027</td>
-</tr>
-<tr>
-<td>Vision re-read, handwriting</td>
-<td>Gemini 3.8 Flash (thinking LOW) or ADE DPT-3 Pro</td>
-<td>Qwen3-VL-8B self-hosted; Gemini 3.1 Pro for the hardest fields</td>
-<td>Decided per field by measured gold-set accuracy</td>
-</tr>
-<tr>
-<td>Recipe engineer (coding), contract review, tax-pack review</td>
-<td>Kimi K3 or GPT-6.1 Sol</td>
-<td>Claude (when the budget allows)</td>
-<td>Runs rarely and its cost is spread across every later run; quality matters most here</td>
+<td>GPT-5.6 Terra</td>
+<td>✅ Exists. $2 / $12 (Batch $1 / $6), and still supported. But GPT-6 has no Terra tier, and <strong>GPT-6 Sol ($2 / $10) beats it on price</strong>.</td>
 </tr>
 </tbody>
 </table></div>
 <p><strong>Cost levers</strong></p>
 <ul>
-<li>Route through <strong>OpenRouter with our own keys</strong> (no fee up to $25k a month), so switching models is a configuration change.</li>
-<li>Prompt caching: cached input is 90%+ cheaper. Keep skill front matter and system prompts stable.</li>
-<li>Batch and off-peak processing for the inbox. Owners don't need sub-second processing of a delivery note.</li>
+<li>Default to Luna with <code>effort=none</code>, and raise reasoning effort per task only when an eval fails.</li>
+<li>Use the Batch API for anything not interactive: the inbox, LightRAG extraction, the distiller and reports.</li>
+<li>Prompt caching (cached Luna input is $0.01/M). Keep skill front matter and system prompts stable.</li>
 <li>Recipes remove the LLM from repeat work.</li>
 <li><code>BudgetMiddleware</code> enforces a ceiling per tenant.</li>
-<li>Measured, not assumed: every LLM call is logged with tenant, tier, tokens and cost.</li>
+<li>Every LLM call is logged with tenant, tier, tokens and cost.</li>
 </ul>
 <h3 id="71-unit-economics-per-location-per-month-estimate">7.1 Unit economics per location per month (estimate)</h3>
-<p>Assumes about 800 pages a month, 60 chat turns, and one month-end close.</p>
+<p>Assumes about 800 pages a month, 60 chat turns and one month-end close.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1032,24 +1345,28 @@ td code { font-size: .82em; }
 </thead>
 <tbody>
 <tr>
-<td>Document pipeline (800 pages × about $0.003)</td>
-<td>$2.40</td>
+<td>Document pipeline: about 70% of pages go to Luna, 20% get a Gemini re-read, 2% go to ADE or Sol</td>
+<td>$1.30–2.20</td>
 </tr>
 <tr>
-<td>Agent and chat tokens (about 20M input, 80% cached, + 1M output on Luna/GLM mix)</td>
-<td>$2–4</td>
+<td>Agent and chat tokens on Luna (about 20M input, 80% cached, plus 1M output)</td>
+<td>≈ $1.10</td>
 </tr>
 <tr>
-<td>Escalations (Gemini 3.8 Flash at 2027 prices, ADE)</td>
-<td>$1–3</td>
+<td>Escalations: GLM-5.3 for recipes and reviews (recipes are reused across runs)</td>
+<td>$0.50–1.00</td>
 </tr>
 <tr>
-<td>Infrastructure share (Postgres, object storage, workers, sandbox minutes)</td>
-<td>$2–3</td>
+<td>Embeddings (<code>text-embedding-3-small</code>, batch) and LightRAG extraction (Luna Batch)</td>
+<td>≈ $0.10</td>
+</tr>
+<tr>
+<td>Infrastructure share (free tiers in the pilot; about $30–80 a month split across 10–100 locations)</td>
+<td>$0–3</td>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>≈ $7–12</strong></td>
+<td><strong>≈ $3–5</strong> (rising to about $4–6 when Gemini's price doubles in 2027)</td>
 </tr>
 <tr>
 <td><strong>Price</strong></td>
@@ -1057,7 +1374,7 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td><strong>Gross margin</strong></td>
-<td><strong>~90%</strong></td>
+<td><strong>~95–97%</strong></td>
 </tr>
 </tbody>
 </table></div>
@@ -1068,7 +1385,7 @@ td code { font-size: .82em; }
 <thead>
 <tr>
 <th>Layer</th>
-<th>Choice</th>
+<th>Choice (MVP)</th>
 <th>Rationale</th>
 </tr>
 </thead>
@@ -1080,33 +1397,53 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>Orchestration</td>
-<td><strong>LangGraph 1.2, self-hosted</strong> inside FastAPI, with <code>langgraph-checkpoint-postgres</code></td>
-<td>Avoids LangSmith Deployment per-minute uptime fees while we are early; Managed Deep Agents is US-only beta</td>
+<td><strong>LangGraph 1.2, run by us</strong> inside FastAPI, with <code>langgraph-checkpoint-postgres</code></td>
+<td>No LangSmith Deployment fees</td>
 </tr>
 <tr>
-<td>Observability</td>
-<td>OpenTelemetry → self-hosted <strong>Langfuse</strong> (or the LangSmith free/Plus tier)</td>
-<td>Cost and traces per tenant</td>
+<td>Models</td>
+<td>GPT-6 Luna (default), Gemini 3.8 Flash (handwriting), GLM-5.3 on Fireworks (coding and hard reasoning), DeepSeek V4.1 Flash (fallback), via <code>init_chat_model</code> / LiteLLM</td>
+<td>Decisions D1–D2</td>
+</tr>
+<tr>
+<td>Parsing</td>
+<td>LiteParse → PP-OCRv5 (CPU) → Luna → Gemini → ADE or Sol</td>
+<td>Decision D1</td>
+</tr>
+<tr>
+<td>Embeddings</td>
+<td><code>text-embedding-3-small</code> at 512 dimensions, stored as <code>halfvec</code></td>
+<td>Decision D3</td>
 </tr>
 <tr>
 <td>Database</td>
-<td><strong>Postgres 17 on Cloud SQL</strong> (Docker locally): RLS, pgvector (halfvec), pg_textsearch BM25, edge tables for the graph, a queue table</td>
-<td>One managed database handles OLTP, vectors, keyword search, the graph and the queue</td>
+<td><strong>Postgres 17</strong>: Docker locally, <strong>Neon</strong> in the cloud. pgvector, built-in full-text, RLS, edge tables, LightRAG tables, <code>semantic</code> schema, queue table</td>
+<td>One database for everything (D4–D6)</td>
+</tr>
+<tr>
+<td>Graph RAG</td>
+<td>Deterministic context graph plus <strong>LightRAG with <code>PGTableGraphStorage</code></strong></td>
+<td>Decision D5; FalkorDB or Neo4j later only as a projection</td>
+</tr>
+<tr>
+<td>Semantic layer</td>
+<td>OSI-format YAML, our own SQL compiler, MCP gateway tools</td>
+<td>Decision D6</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry → LangSmith Developer (free) or Langfuse Cloud free tier</td>
+<td>Cost and traces per tenant</td>
 </tr>
 <tr>
 <td>Blob storage</td>
-<td>Cloudflare R2 (no egress fees) with per-tenant prefixes and keys</td>
+<td>Cloudflare R2 (10 GB free, no egress fees) with per-tenant prefixes</td>
 <td>Cheap</td>
 </tr>
 <tr>
 <td>Sandbox</td>
-<td>Modal or E2B (scale to zero); Docker + gVisor for self-hosting</td>
+<td>Docker locally; <strong>Cloud Run jobs</strong> in the cloud</td>
 <td>Recipe engineer only</td>
-</tr>
-<tr>
-<td>OCR serving</td>
-<td>Locally: GLM-OCR or PaddleOCR-VL via Ollama or MLX. On GCP: Cloud Run <strong>jobs</strong> on an L4 GPU (scale to zero, about $1.05/hr) for nightly batches, and CPU Cloud Run for Tesseract/PP-OCRv5 triage</td>
-<td>Low SMB volume means we must not pay for an idle GPU; use APIs until volume justifies GPUs</td>
 </tr>
 <tr>
 <td>Frontend</td>
@@ -1115,18 +1452,18 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>Auth / tenancy</td>
-<td>Clerk or WorkOS (organisations, invitations, SSO later) → JWT claims <code>org_id, business_id, location_ids, role</code></td>
+<td>Clerk free tier or Auth.js → JWT claims <code>org_id, business_id, location_ids, role</code></td>
 <td></td>
 </tr>
 <tr>
 <td>Messaging</td>
-<td>WhatsApp Business Cloud API, Postmark inbound email</td>
+<td>Email forwarding (Postmark inbound free tier) first; WhatsApp Business Cloud API after the pilot</td>
 <td>Paper-first intake</td>
 </tr>
 <tr>
 <td>Infrastructure</td>
-<td>Local: docker-compose. GCP: Cloud Run (API, workers, jobs) + Cloud SQL + GCS + Secret Manager, with Terraform</td>
-<td>Low fixed cost; one cloud</td>
+<td>docker-compose locally; <strong>Cloud Run + Neon + R2</strong> (Decision D7); Terraform later</td>
+<td>$0–10/month in the pilot</td>
 </tr>
 </tbody>
 </table></div>
@@ -1282,13 +1619,13 @@ td code { font-size: .82em; }
 <tr>
 <td><strong>0. Foundations</strong></td>
 <td>1–3</td>
-<td>Monorepo; Postgres with RLS and the multi-tenant schema; auth (WorkOS/Clerk); assembly of deepagents and LangGraph; model router with cost logging; R2 blob store; pgmq intake</td>
+<td>Monorepo; docker-compose (Postgres 17 + pgvector, MinIO); RLS and the multi-tenant schema; auth (Clerk or Auth.js); assembly of deepagents and LangGraph; model router (Luna, Gemini, GLM-5.3) with cost logging; queue table; Cloud Run + Neon + R2 pilot environment</td>
 <td>Isolation tests pass (a cross-tenant canary never leaks)</td>
 </tr>
 <tr>
 <td><strong>1. Doc pipeline v1</strong></td>
 <td>3–6</td>
-<td>Tiers 0–3; validator library (including handwriting rules: grouped pricing, strike-throughs, circled totals, tick marks); evidence model with bounding boxes; review UI with overlay; gold set of 300 pages (day care + ice cream)</td>
+<td>Refactor <code>gemini_parse_util.py</code> into a provider-agnostic page parser; Luna vs Gemini vs ADE gold-set eval; tiers 0–3; validator library (including handwriting rules: grouped pricing, strike-throughs, circled totals, tick marks); evidence model with bounding boxes; review UI with overlay; gold set of 300 pages (day care + ice cream)</td>
 <td>Field accuracy ≥97% after review routing; cost ≤$3 per 1k pages measured</td>
 </tr>
 <tr>
@@ -1365,9 +1702,14 @@ td code { font-size: .82em; }
 <td>Channel sales through franchisors and accountants; outcome-based tiers</td>
 </tr>
 <tr>
-<td>Model price changes (e.g. Gemini doubling in 2027)</td>
+<td>Model price changes (e.g. Gemini doubling in 2027) or dependence on OpenAI</td>
 <td>Medium</td>
-<td>Router plus open-weights fallbacks plus recipes</td>
+<td>Router with DeepSeek, GLM-5.3 and Gemini fallbacks; Batch API; recipes; open-weights and self-host path</td>
+</tr>
+<tr>
+<td>Free-tier limits (Neon 1 GB per project, Cloud Run quotas)</td>
+<td>Medium</td>
+<td>Move to paid tiers at the first paying customer; the stack is the same, so it's only a configuration change</td>
 </tr>
 <tr>
 <td>Regulatory (tax-adviser registration, children's data)</td>
