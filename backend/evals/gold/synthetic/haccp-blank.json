@@ -1,0 +1,19 @@
+{
+  "file": "haccp-blank.pdf",
+  "mime": "application/pdf",
+  "kind": "haccp_log",
+  "expected": {
+    "batch_number": "B-101",
+    "log_date": "2026-10-01",
+    "operator": "RP",
+    "readings[0].ccp": "Fill temperature",
+    "readings[0].value": "168",
+    "readings[0].time": "09:10",
+    "readings[1].ccp": "Fill temperature",
+    "readings[1].value": null,
+    "readings[1].time": "09:40",
+    "readings[2].ccp": "Pack weight",
+    "readings[2].value": "5.6",
+    "readings[2].time": "10:00"
+  }
+}

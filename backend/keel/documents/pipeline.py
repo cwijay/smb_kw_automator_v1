@@ -47,13 +47,15 @@ def default_extractor() -> Extractor:
     return LlmExtractor(s.model_default)
 
 
-def escalation_extractor() -> Extractor | None:
-    s = get_settings()
-    if not s.live_llm or not s.google_api_key:
-        return None
-    from keel.documents.engines.llm import LlmExtractor
+def escalation_extractors() -> list[Extractor]:
+    """Re-reads in order: Gemini (handwriting), then the tier-4 engine if one is configured and keyed."""
+    from keel.documents.engines.registry import available, engine
 
-    return LlmExtractor(s.model_vision_handwriting)
+    s = get_settings()
+    if not s.live_llm:
+        return []
+    chain = ["gemini"] + ([s.tier4_engine] if s.tier4_engine else [])
+    return [engine(name) for name in chain if available(name)]
 
 
 def _needs_escalation(findings: list[Finding], data: BaseModel, low: float) -> bool:
@@ -133,8 +135,9 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
     order = model.model_validate(result.data.model_dump())
     findings = check(order, today=date.today(), low_confidence=s.low_confidence)
     results = [result]
-    escalate = escalation_extractor()
-    if escalate is not None and _needs_escalation(findings, order, s.low_confidence):
+    for escalate in escalation_extractors():
+        if not _needs_escalation(findings, order, s.low_confidence):
+            break
         second = await escalate.extract(
             inputs, SCHEMAS[kind], hint="Second read: earlier checks failed. Read each digit carefully."
         )

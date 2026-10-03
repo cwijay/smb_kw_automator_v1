@@ -38,6 +38,12 @@ jobs:
       - name: Tests (real Postgres, RLS-bound app role)
         working-directory: backend
         run: uv run pytest -q
+      - name: Parser bake-off on the synthetic gold set (no value may be invented)
+        working-directory: backend
+        run: |
+          uv run keel evals synthetic --out /tmp/gold && git diff --exit-code --no-index evals/gold/synthetic /tmp/gold
+          uv run keel evals parsers --engines local-rules --gold evals/gold/synthetic --out /tmp/evals \
+            --min-accuracy 0.95 --max-invented 0
 
   frontend:
     runs-on: ubuntu-latest

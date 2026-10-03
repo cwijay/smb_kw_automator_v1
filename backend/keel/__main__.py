@@ -53,6 +53,17 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("openapi")
     reindex_cmd = sub.add_parser("reindex", help="re-embed documents for the current embedding model")
     reindex_cmd.add_argument("--all", action="store_true", help="re-chunk and re-embed every document")
+    evals = sub.add_parser("evals", help="parser bake-off").add_subparsers(dest="evals_cmd", required=True)
+    synth = evals.add_parser("synthetic", help="write the synthetic gold set")
+    synth.add_argument("--out", default="evals/gold/synthetic")
+    bake = evals.add_parser("parsers", help="compare extraction engines on a gold set")
+    bake.add_argument(
+        "--engines", default="local-rules", help="comma separated: local-rules,luna,gemini,sol,reducto,ade"
+    )
+    bake.add_argument("--gold", default="evals/gold/synthetic")
+    bake.add_argument("--out", default="evals/reports")
+    bake.add_argument("--min-accuracy", type=float, default=None, help="fail if any engine scores below this")
+    bake.add_argument("--max-invented", type=int, default=None, help="fail if any engine invents more values")
     args = parser.parse_args(argv)
 
     if args.cmd == "api":
@@ -73,10 +84,34 @@ def main(argv: list[str] | None = None) -> None:
         from keel.search.hybrid import reindex
 
         print(f"indexed {asyncio.run(reindex(args.all))} chunk(s)")
+    elif args.cmd == "evals":
+        _evals(args)
     elif args.cmd == "openapi":
         from keel.api.app import create_app
 
         json.dump(create_app().openapi(), sys.stdout, indent=2)
+
+
+def _evals(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    if args.evals_cmd == "synthetic":
+        from keel.evals.synthetic import write
+
+        print(f"wrote {write(Path(args.out))} gold document(s) to {args.out}")
+        return
+    from keel.evals.parsers import bakeoff
+
+    totals = bakeoff([e.strip() for e in args.engines.split(",") if e.strip()], Path(args.gold), Path(args.out))
+    print((Path(args.out) / "report.md").read_text())
+    failed = [
+        n
+        for n, t in totals.items()
+        if (args.min_accuracy is not None and t.accuracy < args.min_accuracy)
+        or (args.max_invented is not None and t.invented > args.max_invented)
+    ]
+    if failed:
+        raise SystemExit(f"Below the bar: {', '.join(failed)}")
 
 
 if __name__ == "__main__":

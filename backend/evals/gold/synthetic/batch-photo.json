@@ -1,0 +1,19 @@
+{
+  "file": "batch-photo.png",
+  "mime": "image/png",
+  "kind": "batch_sheet",
+  "expected": {
+    "product_name": "Malai Kulfi",
+    "batch_number": "B-102",
+    "made_on": "2026-10-01",
+    "output_lot": "L-2003",
+    "quantity": "120",
+    "prepared_by": "RP",
+    "ingredients[0].ingredient": "Whole Milk",
+    "ingredients[0].lot_code": "M-0133",
+    "ingredients[0].quantity": "136",
+    "ingredients[1].ingredient": "Sugar",
+    "ingredients[1].lot_code": "S-42703",
+    "ingredients[1].quantity": "100"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "file": "batch-complete.pdf",
+  "mime": "application/pdf",
+  "kind": "batch_sheet",
+  "expected": {
+    "product_name": "Malai Kulfi",
+    "batch_number": "B-100",
+    "made_on": "2026-10-01",
+    "output_lot": "L-2001",
+    "quantity": "120",
+    "prepared_by": "RP",
+    "ingredients[0].ingredient": "Whole Milk",
+    "ingredients[0].lot_code": "M-0129",
+    "ingredients[0].quantity": "136",
+    "ingredients[1].ingredient": "Cream",
+    "ingredients[1].lot_code": "C-0130",
+    "ingredients[1].quantity": "280",
+    "ingredients[2].ingredient": "Sugar",
+    "ingredients[2].lot_code": "S-42702",
+    "ingredients[2].quantity": "100"
+  }
+}

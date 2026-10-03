@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     model_reasoning: str = "fireworks:accounts/fireworks/models/glm-5p3"
     model_fallback: str = "openai:gpt-6-luna"
 
+    # Tier 4: only for pages that still fail checks after the Gemini re-read. Off unless named here;
+    # which one is decided per document type by `keel evals parsers`.
+    tier4_engine: Literal["reducto", "ade", "sol"] | None = None
+    tier4_confidence: float = 0.85  # services return no per-field confidence; this is what we assume
+    model_tier4_sol: str = "openai:gpt-6-sol"
+    reducto_api_key: str | None = Field(default=None, validation_alias="REDUCTO_API_KEY")
+    reducto_url: str = "https://platform.reducto.ai"
+    reducto_usd_per_page: float = 0.02  # placeholder: set from your plan; bake-off cost figures use it
+    landingai_api_key: str | None = Field(default=None, validation_alias="VISION_AGENT_API_KEY")
+    ade_url: str = "https://api.va.landing.ai"
+    ade_usd_per_page: float = 0.03  # placeholder: set from your plan
+
     # Search: full-text + pg_trgm spelling + (live only) OpenAI embeddings, fused by RRF.
     embedding_model: str = "text-embedding-3-small"
     embedding_dims: int = 512

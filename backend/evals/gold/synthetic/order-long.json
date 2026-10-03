@@ -1,0 +1,24 @@
+{
+  "file": "order-long.pdf",
+  "mime": "application/pdf",
+  "kind": "order_pad",
+  "expected": {
+    "customer_name": "Little Bombay Cafe",
+    "order_number": "1003",
+    "order_date": "2026-10-01",
+    "delivery_date": "2026-10-04",
+    "total_written": "40.25",
+    "lines[0].quantity": "2",
+    "lines[0].description": "Paan Masala",
+    "lines[0].unit_price": "6.00",
+    "lines[0].line_total": "12.00",
+    "lines[1].quantity": "4",
+    "lines[1].description": "Rose Petal Kulfi",
+    "lines[1].unit_price": "5.50",
+    "lines[1].line_total": "22.00",
+    "lines[2].quantity": "1",
+    "lines[2].description": "Figs Walnut",
+    "lines[2].unit_price": "6.25",
+    "lines[2].line_total": "6.25"
+  }
+}

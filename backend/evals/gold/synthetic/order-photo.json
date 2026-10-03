@@ -1,0 +1,16 @@
+{
+  "file": "order-photo.png",
+  "mime": "image/png",
+  "kind": "order_pad",
+  "expected": {
+    "customer_name": "Saffron Grill",
+    "order_number": "1002",
+    "order_date": "2026-10-01",
+    "delivery_date": "2026-10-04",
+    "total_written": "34.50",
+    "lines[0].quantity": "6",
+    "lines[0].description": "Pista Kulfi",
+    "lines[0].unit_price": "5.75",
+    "lines[0].line_total": "34.50"
+  }
+}

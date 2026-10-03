@@ -1,0 +1,19 @@
+{
+  "file": "batch-missing-lot.pdf",
+  "mime": "application/pdf",
+  "kind": "batch_sheet",
+  "expected": {
+    "product_name": "Malai Kulfi",
+    "batch_number": "B-101",
+    "made_on": "2026-10-01",
+    "output_lot": "L-2002",
+    "quantity": "120",
+    "prepared_by": "RP",
+    "ingredients[0].ingredient": "Whole Milk",
+    "ingredients[0].lot_code": "M-0131",
+    "ingredients[0].quantity": "136",
+    "ingredients[1].ingredient": "Rose Water",
+    "ingredients[1].lot_code": null,
+    "ingredients[1].quantity": "140"
+  }
+}
