@@ -17,7 +17,9 @@ async def checkpointer() -> AsyncPostgresSaver:
     if _saver is None:
         dsn = get_settings().database_url.replace("postgresql+psycopg://", "postgresql://")
         _pool = AsyncConnectionPool(
-            dsn, max_size=5, open=False,
+            dsn,
+            max_size=5,
+            open=False,
             kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
         )
         await _pool.open()

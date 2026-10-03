@@ -30,11 +30,23 @@ def payload_hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-async def request_approval(db: AsyncSession, org_id: uuid.UUID, gate: str, payload: dict[str, Any],
-                           summary: dict[str, Any], requested_by: uuid.UUID | None) -> Approval:
+async def request_approval(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    gate: str,
+    payload: dict[str, Any],
+    summary: dict[str, Any],
+    requested_by: uuid.UUID | None,
+) -> Approval:
     clean = json.loads(json.dumps(payload, default=_default))
-    approval = Approval(org_id=org_id, gate=gate, payload_hash=payload_hash(clean), summary=summary,
-                        staged_payload=clean, requested_by=requested_by)
+    approval = Approval(
+        org_id=org_id,
+        gate=gate,
+        payload_hash=payload_hash(clean),
+        summary=summary,
+        staged_payload=clean,
+        requested_by=requested_by,
+    )
     db.add(approval)
     await db.flush()
     return approval
@@ -48,13 +60,20 @@ async def decide(db: AsyncSession, approval_id: uuid.UUID, user_id: uuid.UUID, a
         raise ApprovalRequired("This approval was already decided. Review the latest version.")
     approval.status = "approved" if approve else "rejected"
     approval.decided_by, approval.decided_at = user_id, datetime.now(UTC)
-    await audit(db, approval.org_id, user_id, f"approval.{approval.status}", "approval", approval.id,
-                gate=approval.gate, summary=approval.summary)
+    await audit(
+        db,
+        approval.org_id,
+        user_id,
+        f"approval.{approval.status}",
+        "approval",
+        approval.id,
+        gate=approval.gate,
+        summary=approval.summary,
+    )
     return approval
 
 
-async def consume(db: AsyncSession, approval_id: uuid.UUID | None, gate: str,
-                  payload: dict[str, Any]) -> Approval:
+async def consume(db: AsyncSession, approval_id: uuid.UUID | None, gate: str, payload: dict[str, Any]) -> Approval:
     """Called by every write tool. Refuses unless an approved, unused approval matches this payload."""
     if approval_id is None:
         raise ApprovalRequired(f"'{gate}' needs an explicit approval first.")
@@ -65,6 +84,7 @@ async def consume(db: AsyncSession, approval_id: uuid.UUID | None, gate: str,
         raise ApprovalRequired(f"Approval for '{gate}' is {approval.status}, not approved.")
     if approval.payload_hash != payload_hash(json.loads(json.dumps(payload, default=_default))):
         raise ApprovalRequired("What is being written differs from what was approved. Approve again.")
-    await db.execute(update(Approval).where(Approval.id == approval_id)
-                     .values(status="used", used_at=datetime.now(UTC)))
+    await db.execute(
+        update(Approval).where(Approval.id == approval_id).values(status="used", used_at=datetime.now(UTC))
+    )
     return approval

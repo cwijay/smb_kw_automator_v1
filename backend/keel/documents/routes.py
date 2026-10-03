@@ -91,15 +91,28 @@ class CorrectionIn(BaseModel):
 
 
 def _doc_out(d: Document, run: WorkflowRun | None = None, duplicate: bool = False) -> DocumentOut:
-    return DocumentOut(id=str(d.id), filename=d.filename, kind=d.kind, status=d.status, source=d.source,
-                       page_count=d.page_count, created_at=d.created_at.isoformat(), error=d.error,
-                       duplicate=duplicate, run_id=str(run.id) if run else None,
-                       run_status=run.status if run else None)
+    return DocumentOut(
+        id=str(d.id),
+        filename=d.filename,
+        kind=d.kind,
+        status=d.status,
+        source=d.source,
+        page_count=d.page_count,
+        created_at=d.created_at.isoformat(),
+        error=d.error,
+        duplicate=duplicate,
+        run_id=str(run.id) if run else None,
+        run_status=run.status if run else None,
+    )
 
 
 @router.post("/documents", response_model=DocumentOut)
-async def upload(file: UploadFile, kind: Literal["order_pad", "other", "unknown"] = Form("order_pad"),
-                 source: Literal["upload", "camera", "email"] = Form("upload"), ctx: Ctx = Member) -> DocumentOut:
+async def upload(
+    file: UploadFile,
+    kind: Literal["order_pad", "other", "unknown"] = Form("order_pad"),
+    source: Literal["upload", "camera", "email"] = Form("upload"),
+    ctx: Ctx = Member,
+) -> DocumentOut:
     data = await file.read()
     mime = file.content_type or ""
     if mime not in ALLOWED:
@@ -115,8 +128,18 @@ async def upload(file: UploadFile, kind: Literal["order_pad", "other", "unknown"
         doc_id = uuid7()
         key = doc_key(ctx.org_id, doc_id, f"original-{(file.filename or 'upload').replace('/', '_')}")
         await storage().put(key, data)
-        doc = Document(id=doc_id, org_id=ctx.org_id, kind=kind, filename=file.filename or "upload", mime=mime,
-                       size_bytes=len(data), sha256=digest, storage_key=key, source=source, created_by=ctx.user_id)
+        doc = Document(
+            id=doc_id,
+            org_id=ctx.org_id,
+            kind=kind,
+            filename=file.filename or "upload",
+            mime=mime,
+            size_bytes=len(data),
+            sha256=digest,
+            storage_key=key,
+            source=source,
+            created_by=ctx.user_id,
+        )
         db.add(doc)
         await db.flush()
         await enqueue(db, ctx.org_id, "process_document", document_id=str(doc_id), user_id=str(ctx.user_id))
@@ -151,32 +174,48 @@ async def detail(document_id: uuid.UUID, ctx: Ctx = Viewer) -> DocumentDetail:
         if doc is None:
             raise NotFound("Document not found.")
         pages = (await db.scalars(select(Page).where(Page.document_id == document_id).order_by(Page.n))).all()
-        extraction = await db.scalar(select(Extraction).where(Extraction.document_id == document_id)
-                                     .order_by(Extraction.created_at.desc()))
+        extraction = await db.scalar(
+            select(Extraction).where(Extraction.document_id == document_id).order_by(Extraction.created_at.desc())
+        )
         fields: list[FieldOut] = []
         if extraction:
             rows = await db.execute(
-                select(FieldResult, FieldCitation).outerjoin(FieldCitation,
-                                                            FieldCitation.field_result_id == FieldResult.id)
+                select(FieldResult, FieldCitation)
+                .outerjoin(FieldCitation, FieldCitation.field_result_id == FieldResult.id)
                 .where(FieldResult.extraction_id == extraction.id)
             )
             for fr, cit in rows:
                 box = Box(page_id=str(cit.page_id), x=cit.x, y=cit.y, w=cit.w, h=cit.h, text=cit.text) if cit else None
-                fields.append(FieldOut(id=str(fr.id), path=fr.path, value=fr.value, status=fr.status,
-                                       confidence=fr.confidence, engine=fr.engine, box=box))
+                fields.append(
+                    FieldOut(
+                        id=str(fr.id),
+                        path=fr.path,
+                        value=fr.value,
+                        status=fr.status,
+                        confidence=fr.confidence,
+                        engine=fr.engine,
+                        box=box,
+                    )
+                )
         run = await _run_for(db, document_id)
         approval = None
         if run and run.pending_approval_id:
             a = await db.get(Approval, run.pending_approval_id)
             if a:
-                approval = ApprovalOut(id=str(a.id), gate=a.gate, status=a.status, summary=a.summary,
-                                       proposal=a.staged_payload)
+                approval = ApprovalOut(
+                    id=str(a.id), gate=a.gate, status=a.status, summary=a.summary, proposal=a.staged_payload
+                )
         return DocumentDetail(
-            document=_doc_out(doc, run), pages=[PageOut(id=str(p.id), n=p.n, width=p.width, height=p.height,
-                                                        has_text_layer=p.has_text_layer) for p in pages],
-            fields=sorted(fields, key=lambda f: _path_key(f.path)), checks=extraction.checks if extraction else [],
+            document=_doc_out(doc, run),
+            pages=[
+                PageOut(id=str(p.id), n=p.n, width=p.width, height=p.height, has_text_layer=p.has_text_layer)
+                for p in pages
+            ],
+            fields=sorted(fields, key=lambda f: _path_key(f.path)),
+            checks=extraction.checks if extraction else [],
             engine=extraction.engine if extraction else None,
-            cost_usd=float(extraction.cost_usd) if extraction else 0.0, approval=approval,
+            cost_usd=float(extraction.cost_usd) if extraction else 0.0,
+            approval=approval,
         )
 
 
@@ -193,8 +232,9 @@ async def page_image(document_id: uuid.UUID, n: int, ctx: Ctx = Viewer) -> Respo
         if page is None:
             raise NotFound("Page not found.")
         key = page.image_key
-    return Response(await storage().get(key), media_type="image/png",
-                    headers={"Cache-Control": "private, max-age=3600"})
+    return Response(
+        await storage().get(key), media_type="image/png", headers={"Cache-Control": "private, max-age=3600"}
+    )
 
 
 def _set_path(data: dict[str, Any], path: str, value: Any) -> None:
@@ -206,8 +246,7 @@ def _set_path(data: dict[str, Any], path: str, value: Any) -> None:
 
 
 @router.put("/documents/{document_id}/fields/{field_id}", response_model=FieldOut)
-async def correct_field(document_id: uuid.UUID, field_id: uuid.UUID, body: CorrectionIn,
-                        ctx: Ctx = Member) -> FieldOut:
+async def correct_field(document_id: uuid.UUID, field_id: uuid.UUID, body: CorrectionIn, ctx: Ctx = Member) -> FieldOut:
     """A human correction. It updates the evidence and supersedes any pending approval."""
     from datetime import UTC, datetime
 
@@ -224,14 +263,21 @@ async def correct_field(document_id: uuid.UUID, field_id: uuid.UUID, body: Corre
         old = fr.value
         fr.value, fr.status, fr.confidence = body.value, "corrected", 1.0
         fr.corrected_by, fr.corrected_at = ctx.user_id, datetime.now(UTC)
-        await audit(db, ctx.org_id, ctx.user_id, "field.corrected", "field", fr.id, path=fr.path, old=old,
-                    new=body.value)
+        await audit(
+            db, ctx.org_id, ctx.user_id, "field.corrected", "field", fr.id, path=fr.path, old=old, new=body.value
+        )
         run = await _run_for(db, document_id)
         run_id = run.id if run and run.status == "waiting_approval" else None
         cit = await db.scalar(select(FieldCitation).where(FieldCitation.field_result_id == fr.id))
-        out = FieldOut(id=str(fr.id), path=fr.path, value=fr.value, status=fr.status, confidence=fr.confidence,
-                       engine=fr.engine, box=Box(page_id=str(cit.page_id), x=cit.x, y=cit.y, w=cit.w, h=cit.h,
-                                                 text=cit.text) if cit else None)
+        out = FieldOut(
+            id=str(fr.id),
+            path=fr.path,
+            value=fr.value,
+            status=fr.status,
+            confidence=fr.confidence,
+            engine=fr.engine,
+            box=Box(page_id=str(cit.page_id), x=cit.x, y=cit.y, w=cit.w, h=cit.h, text=cit.text) if cit else None,
+        )
     if run_id:
         from keel.workflows.order_intake import resume
 

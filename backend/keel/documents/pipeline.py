@@ -91,8 +91,16 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
                 words = ocr.ocr_words(rp.png)
             image_key = doc_key(org_id, document_id, f"page-{n}.png")
             await storage().put(image_key, rp.png)
-            page = Page(org_id=org_id, document_id=document_id, n=n, image_key=image_key, width=rp.width,
-                        height=rp.height, has_text_layer=rp.has_text_layer, words=words)
+            page = Page(
+                org_id=org_id,
+                document_id=document_id,
+                n=n,
+                image_key=image_key,
+                width=rp.width,
+                height=rp.height,
+                has_text_layer=rp.has_text_layer,
+                words=words,
+            )
             db.add(page)
             page_ids.append(page.id)
             text = page_text(words)
@@ -113,8 +121,9 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
     results = [result]
     escalate = escalation_extractor()
     if escalate is not None and _needs_escalation(findings, order, s.low_confidence):
-        second = await escalate.extract(inputs, SCHEMAS["order_pad"],
-                                        hint="Second read: earlier checks failed. Read each digit carefully.")
+        second = await escalate.extract(
+            inputs, SCHEMAS["order_pad"], hint="Second read: earlier checks failed. Read each digit carefully."
+        )
         candidate = OrderPadX.model_validate(second.data.model_dump())
         cand_findings = check_order(candidate, today=date.today(), low_confidence=s.low_confidence)
         results.append(second)
@@ -123,12 +132,25 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
 
     async with tenant_session(org_id) as db:
         for r in results:
-            await record_usage(db, org_id, "extract", model=r.model, input_tokens=r.input_tokens,
-                               output_tokens=r.output_tokens, pages=len(inputs), cost_usd=r.cost_usd,
-                               document_id=str(document_id), engine=r.engine)
+            await record_usage(
+                db,
+                org_id,
+                "extract",
+                model=r.model,
+                input_tokens=r.input_tokens,
+                output_tokens=r.output_tokens,
+                pages=len(inputs),
+                cost_usd=r.cost_usd,
+                document_id=str(document_id),
+                engine=r.engine,
+            )
         extraction = Extraction(
-            org_id=org_id, document_id=document_id, schema_name="order_pad", engine=result.engine,
-            data=order.model_dump(mode="json"), checks=[f.dict() for f in findings],
+            org_id=org_id,
+            document_id=document_id,
+            schema_name="order_pad",
+            engine=result.engine,
+            data=order.model_dump(mode="json"),
+            checks=[f.dict() for f in findings],
             cost_usd=Decimal(str(sum(r.cost_usd for r in results))),
         )
         db.add(extraction)
@@ -138,17 +160,41 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
         assert doc is not None
         doc.kind = "order_pad"
         doc.status = "needs_review"
-        await audit(db, org_id, None, "document.extracted", "document", document_id, engine=result.engine,
-                    findings=len(findings))
+        await audit(
+            db,
+            org_id,
+            None,
+            "document.extracted",
+            "document",
+            document_id,
+            engine=result.engine,
+            findings=len(findings),
+        )
     log.info("document.processed", document_id=str(document_id), engine=result.engine, findings=len(findings))
     return extraction.id
 
 
-async def _store_fields(db: Any, org_id: uuid.UUID, document_id: uuid.UUID, extraction_id: uuid.UUID,
-                        order: OrderPadX, inputs: list[PageInput], page_ids: list[uuid.UUID], engine: str) -> None:
+async def _store_fields(
+    db: Any,
+    org_id: uuid.UUID,
+    document_id: uuid.UUID,
+    extraction_id: uuid.UUID,
+    order: OrderPadX,
+    inputs: list[PageInput],
+    page_ids: list[uuid.UUID],
+    engine: str,
+) -> None:
     for path, f in flatten(order):
-        fr = FieldResult(org_id=org_id, document_id=document_id, extraction_id=extraction_id, path=path,
-                         value=f["value"], status=f["status"], confidence=f["confidence"], engine=engine)
+        fr = FieldResult(
+            org_id=org_id,
+            document_id=document_id,
+            extraction_id=extraction_id,
+            path=path,
+            value=f["value"],
+            status=f["status"],
+            confidence=f["confidence"],
+            engine=engine,
+        )
         for page_id, page in zip(page_ids, inputs, strict=True):
             raw = f["value"]
             if path.endswith(("quantity", "unit_price", "line_total", "total_written")) and raw is not None:
@@ -158,8 +204,18 @@ async def _store_fields(db: Any, org_id: uuid.UUID, document_id: uuid.UUID, extr
                 fr.page_id = page_id
                 db.add(fr)
                 await db.flush()
-                db.add(FieldCitation(org_id=org_id, field_result_id=fr.id, page_id=page_id, x=box["x"],
-                                     y=box["y"], w=box["w"], h=box["h"], text=box["text"]))
+                db.add(
+                    FieldCitation(
+                        org_id=org_id,
+                        field_result_id=fr.id,
+                        page_id=page_id,
+                        x=box["x"],
+                        y=box["y"],
+                        w=box["w"],
+                        h=box["h"],
+                        text=box["text"],
+                    )
+                )
                 break
         else:
             fr.page_id = page_ids[0] if page_ids else None

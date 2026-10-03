@@ -24,16 +24,14 @@ async def test_login_wrong_password(app: object, owner: httpx.AsyncClient) -> No
         assert (await c.get("/api/me")).status_code == 200
 
 
-async def test_client_headers_cannot_choose_tenant(owner: httpx.AsyncClient,
-                                                   other_tenant: httpx.AsyncClient) -> None:
+async def test_client_headers_cannot_choose_tenant(owner: httpx.AsyncClient, other_tenant: httpx.AsyncClient) -> None:
     other_me = (await other_tenant.get("/api/me")).json()
     await other_tenant.post("/api/customers", json={"name": "Secret Café"})
     r = await owner.get("/api/customers", headers={"X-Organization-ID": other_me["org_id"]})
     assert all(c["name"] != "Secret Café" for c in r.json())
 
 
-async def test_rls_canary_blocks_cross_tenant_reads(owner: httpx.AsyncClient,
-                                                    other_tenant: httpx.AsyncClient) -> None:
+async def test_rls_canary_blocks_cross_tenant_reads(owner: httpx.AsyncClient, other_tenant: httpx.AsyncClient) -> None:
     await other_tenant.post("/api/customers", json={"name": "Canary Diner"})
     mine = (await owner.get("/api/me")).json()
     theirs = (await other_tenant.get("/api/me")).json()
@@ -54,14 +52,14 @@ async def test_invite_flow_and_roles(app: object, owner: httpx.AsyncClient) -> N
     async with _client(app) as staff:
         preview = (await staff.get(f"/api/invites/{token}")).json()
         assert preview["org_name"] == "Acme Kulfi"
-        r = await staff.post(f"/api/invites/{token}/accept",
-                             json={"name": "Sam", "password": "another-long-pass"})
+        r = await staff.post(f"/api/invites/{token}/accept", json={"name": "Sam", "password": "another-long-pass"})
         assert r.status_code == 200, r.text
         me = (await staff.get("/api/me")).json()
         assert me["role"] == "member"
         # members cannot invite or change roles
-        assert (await staff.post("/api/orgs/current/invites",
-                                 json={"email": "x@example.com", "role": "viewer"})).status_code == 403
+        assert (
+            await staff.post("/api/orgs/current/invites", json={"email": "x@example.com", "role": "viewer"})
+        ).status_code == 403
         # invite tokens are single use
         assert (await staff.get(f"/api/invites/{token}")).status_code == 404
     members = (await owner.get("/api/orgs/current/members")).json()

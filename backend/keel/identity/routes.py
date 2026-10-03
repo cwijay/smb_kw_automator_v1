@@ -144,8 +144,14 @@ async def me(ctx: Ctx = Viewer) -> MeOut:
         org = await db.scalar(select(Org).where(Org.id == ctx.org_id))
     assert org is not None
     return MeOut(
-        user_id=str(ctx.user_id), name=ctx.name, email=ctx.email, org_id=str(ctx.org_id), org_name=org.name,
-        role=ctx.role, currency=org.currency, timezone=org.timezone,
+        user_id=str(ctx.user_id),
+        name=ctx.name,
+        email=ctx.email,
+        org_id=str(ctx.org_id),
+        org_name=org.name,
+        role=ctx.role,
+        currency=org.currency,
+        timezone=org.timezone,
         orgs=[OrgRef(**o) for o in await service.my_orgs(ctx)],
     )
 
@@ -198,8 +204,9 @@ async def invite_preview(token: str) -> InvitePreview:
 
 
 @router.post("/invites/{token}/accept", response_model=OkOut)
-async def invite_accept(token: str, body: AcceptIn, response: Response,
-                        current: Ctx | None = Depends(optional_ctx)) -> OkOut:
+async def invite_accept(
+    token: str, body: AcceptIn, response: Response, current: Ctx | None = Depends(optional_ctx)
+) -> OkOut:
     new_token = await service.accept_invite(token, name=body.name, password=body.password, current=current)
     if new_token:
         set_session_cookie(response, new_token)

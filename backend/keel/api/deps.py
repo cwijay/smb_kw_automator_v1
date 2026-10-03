@@ -43,8 +43,13 @@ def require_role(role: str) -> Callable[..., Awaitable[Ctx]]:
 def set_session_cookie(response: Response, token: str) -> None:
     s = get_settings()
     response.set_cookie(
-        s.session_cookie, token, max_age=s.session_ttl_days * 86400, httponly=True, secure=s.cookie_secure,
-        samesite="lax", path="/",
+        s.session_cookie,
+        token,
+        max_age=s.session_ttl_days * 86400,
+        httponly=True,
+        secure=s.cookie_secure,
+        samesite="lax",
+        path="/",
     )
 
 

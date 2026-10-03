@@ -1,3 +1,88 @@
-from fastapi import APIRouter
+"""Ask Keel streaming endpoint (Server-Sent Events): tokens, tool calls and tool results as they happen."""
 
-router = APIRouter()
+import json
+import uuid
+from collections.abc import AsyncIterator
+from typing import Any
+
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
+from pydantic import BaseModel, Field
+
+from keel.agents.factory import agent_input, build_agent, thread
+from keel.api.deps import Viewer
+from keel.audit.service import record_usage
+from keel.documents.engines.base import cost
+from keel.identity.service import Ctx
+from keel.platform.config import get_settings
+from keel.platform.db import tenant_session
+from keel.platform.logging import log
+
+router = APIRouter(tags=["agent"])
+
+
+class AskIn(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    conversation_id: uuid.UUID
+
+
+def _text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return ""
+
+
+def _sse(event: dict[str, Any]) -> str:
+    return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+async def _stream(ctx: Ctx, body: AskIn) -> AsyncIterator[str]:
+    agent = await build_agent(ctx.org_id, ctx.user_id)
+    config = thread(ctx.org_id, ctx.user_id, body.conversation_id)
+    tin = tout = 0
+    streamed_text = False
+    try:
+        async for mode, chunk in agent.astream(
+            await agent_input(ctx.org_id, ctx.user_id, body.message), config, stream_mode=["messages", "updates"]
+        ):
+            if mode == "messages":
+                msg, meta = chunk
+                if isinstance(msg, AIMessageChunk) and meta.get("langgraph_node") == "model":
+                    text = _text(msg.content)
+                    if text:
+                        streamed_text = True
+                        yield _sse({"type": "token", "text": text})
+                continue
+            for update in (chunk or {}).values():
+                for m in (update or {}).get("messages", []) if isinstance(update, dict) else []:
+                    if isinstance(m, AIMessage):
+                        usage: dict[str, Any] = dict(m.usage_metadata or {})
+                        tin += int(usage.get("input_tokens", 0))
+                        tout += int(usage.get("output_tokens", 0))
+                        for tc in m.tool_calls:
+                            yield _sse({"type": "tool", "name": tc["name"], "args": tc["args"]})
+                        if not streamed_text and _text(m.content):
+                            yield _sse({"type": "token", "text": _text(m.content)})
+                    elif isinstance(m, ToolMessage):
+                        yield _sse({"type": "tool_result", "name": m.name, "preview": str(m.content)[:400]})
+    except Exception as exc:  # surface a readable error to the chat instead of a broken stream
+        log.error("agent.failed", error=str(exc))
+        yield _sse({"type": "error", "message": "Keel could not answer that. Try rephrasing."})
+    model = get_settings().model_default.split(":", 1)[1] if get_settings().live_llm else "offline"
+    async with tenant_session(ctx.org_id, ctx.user_id) as db:
+        await record_usage(
+            db, ctx.org_id, "ask", model=model, input_tokens=tin, output_tokens=tout, cost_usd=cost(model, tin, tout)
+        )
+    yield _sse({"type": "done"})
+
+
+@router.post("/agent/ask")
+async def ask(body: AskIn, ctx: Ctx = Viewer) -> StreamingResponse:
+    return StreamingResponse(
+        _stream(ctx, body),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

@@ -31,9 +31,15 @@ def ocr_words(png: bytes) -> list[dict[str, Any]]:
     for box, text, score in zip(result.boxes, result.txts, result.scores, strict=False):
         xs = [float(p[0]) for p in box]
         ys = [float(p[1]) for p in box]
-        words.append({
-            "text": str(text), "x": min(xs) / width, "y": min(ys) / height,
-            "w": (max(xs) - min(xs)) / width, "h": (max(ys) - min(ys)) / height,
-            "conf": float(score), "source": "ocr",
-        })
+        words.append(
+            {
+                "text": str(text),
+                "x": min(xs) / width,
+                "y": min(ys) / height,
+                "w": (max(xs) - min(xs)) / width,
+                "h": (max(ys) - min(ys)) / height,
+                "conf": float(score),
+                "source": "ocr",
+            }
+        )
     return words

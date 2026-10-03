@@ -1,10 +1,10 @@
 """Keel CLI: one codebase, several run modes.
 
-    keel api      HTTP API (uvicorn)
-    keel worker   background job runner (parsing, extraction, workflows)
-    keel migrate  database migrations + LangGraph checkpoint tables (as the owner role)
-    keel seed     demo tenant with users, catalog and sample documents
-    keel openapi  print the OpenAPI document (used to generate the frontend client)
+keel api      HTTP API (uvicorn)
+keel worker   background job runner (parsing, extraction, workflows)
+keel migrate  database migrations + LangGraph checkpoint tables (as the owner role)
+keel seed     demo tenant with users, catalog and sample documents
+keel openapi  print the OpenAPI document (used to generate the frontend client)
 """
 
 import argparse
@@ -34,9 +34,7 @@ async def _setup_checkpointer(owner_url: str) -> None:
     dsn = owner_url.replace("postgresql+psycopg://", "postgresql://")
     async with await AsyncConnection.connect(dsn, autocommit=True) as conn:
         await AsyncPostgresSaver(conn).setup()  # type: ignore[arg-type]
-        await conn.execute(
-            "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO keel_app"
-        )
+        await conn.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO keel_app")
 
 
 def main(argv: list[str] | None = None) -> None:

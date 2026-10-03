@@ -67,12 +67,16 @@ class FakeExtractor:
                 val = m.group(1).strip()
                 if key in ("order_date", "delivery_date"):
                     d = _date(val)
-                    setattr(result, key, DateField(value=d, status="read" if d else "unreadable",
-                                                   confidence=conf if d else 0.0))
+                    setattr(
+                        result,
+                        key,
+                        DateField(value=d, status="read" if d else "unreadable", confidence=conf if d else 0.0),
+                    )
                 elif key == "total_written":
                     n = _num(val)
-                    result.total_written = NumberField(value=n, status="read" if n is not None else "unreadable",
-                                                       confidence=conf)
+                    result.total_written = NumberField(
+                        value=n, status="read" if n is not None else "unreadable", confidence=conf
+                    )
                 else:
                     setattr(result, key, TextField(value=val, status="read", confidence=conf))
                 break
@@ -86,16 +90,24 @@ class FakeExtractor:
             if in_lines and m:
                 desc = m.group("desc").replace("(crossed out)", "").strip(" ~")
                 price, amount = _num(m.group("price")), _num(m.group("amount"))
-                result.lines.append(OrderLineX(
-                    description=TextField(value=desc, status="read", confidence=conf),
-                    quantity=NumberField(value=_num(m.group("qty")), status="read", confidence=conf),
-                    unit=TextField(value=(m.group("unit") or "each").lower(), status="read", confidence=conf),
-                    unit_price=NumberField(value=price, status="read" if price is not None else "blank",
-                                           confidence=conf if price is not None else 0.0),
-                    line_total=NumberField(value=amount, status="read" if amount is not None else "blank",
-                                           confidence=conf if amount is not None else 0.0),
-                    crossed_out=crossed,
-                ))
+                result.lines.append(
+                    OrderLineX(
+                        description=TextField(value=desc, status="read", confidence=conf),
+                        quantity=NumberField(value=_num(m.group("qty")), status="read", confidence=conf),
+                        unit=TextField(value=(m.group("unit") or "each").lower(), status="read", confidence=conf),
+                        unit_price=NumberField(
+                            value=price,
+                            status="read" if price is not None else "blank",
+                            confidence=conf if price is not None else 0.0,
+                        ),
+                        line_total=NumberField(
+                            value=amount,
+                            status="read" if amount is not None else "blank",
+                            confidence=conf if amount is not None else 0.0,
+                        ),
+                        crossed_out=crossed,
+                    )
+                )
             elif re.search(r"\b(ignore|assistant|system prompt|instructions?)\b", line, re.I):
                 result.instructions_found.append(line)
         return EngineResult(data=result, engine=self.name)

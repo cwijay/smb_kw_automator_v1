@@ -54,8 +54,7 @@ async def catalog(db: AsyncSession) -> tuple[dict[str, uuid.UUID], dict[uuid.UUI
     return options, products
 
 
-def match_product(written: str | None, options: dict[str, uuid.UUID],
-                  products: dict[uuid.UUID, Product]) -> Match:
+def match_product(written: str | None, options: dict[str, uuid.UUID], products: dict[uuid.UUID, Product]) -> Match:
     m = _best(written, options)
     return Match(m.id, products[m.id].name if m.id else None, m.score)
 

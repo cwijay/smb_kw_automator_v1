@@ -38,8 +38,9 @@ class State(TypedDict, total=False):
     order_id: str | None
 
 
-async def build_proposal(db: AsyncSession, org_id: uuid.UUID, document_id: uuid.UUID,
-                         overrides: dict[str, Any]) -> dict[str, Any]:
+async def build_proposal(
+    db: AsyncSession, org_id: uuid.UUID, document_id: uuid.UUID, overrides: dict[str, Any]
+) -> dict[str, Any]:
     """Deterministic: same extraction + same overrides → same payload (and hash)."""
     extraction = await latest_extraction(db, document_id)
     if extraction is None:
@@ -49,6 +50,7 @@ async def build_proposal(db: AsyncSession, org_id: uuid.UUID, document_id: uuid.
     assert org is not None
 
     written_customer = (data.get("customer_name") or {}).get("value")
+    customer: dict[str, Any] | None
     if overrides.get("customer_id"):
         cust = await db.get(Customer, uuid.UUID(overrides["customer_id"]))
         customer = {"id": str(cust.id), "name": cust.name, "matched_by": "owner"} if cust else None
@@ -82,27 +84,46 @@ async def build_proposal(db: AsyncSession, org_id: uuid.UUID, document_id: uuid.
             continue
         unit_price, price_source = await price_for(db, uuid.UUID(customer["id"]) if customer else None, product)
         q = Decimal(str(qty))
-        lines.append({
-            "path": path, "description": desc, "product_id": str(product.id), "product_name": product.name,
-            "sku": product.sku, "quantity": str(q), "unit": product.unit, "unit_price": str(unit_price),
-            "price_source": price_source, "line_total": str((q * unit_price).quantize(Decimal("0.01"))),
-        })
+        lines.append(
+            {
+                "path": path,
+                "description": desc,
+                "product_id": str(product.id),
+                "product_name": product.name,
+                "sku": product.sku,
+                "quantity": str(q),
+                "unit": product.unit,
+                "unit_price": str(unit_price),
+                "price_source": price_source,
+                "line_total": str((q * unit_price).quantize(Decimal("0.01"))),
+            }
+        )
     if customer is None:
         blocks.append(f"Customer '{written_customer or 'unreadable'}' does not match a customer. Pick one.")
     if not any(ln.get("product_id") for ln in lines):
         blocks.append("There are no lines to order.")
-    blocks += [c["message"] for c in extraction.checks if c["severity"] == "block" and c["code"] not in
-               ("customer_missing", "quantity_unreadable", "no_lines")]
+    blocks += [
+        c["message"]
+        for c in extraction.checks
+        if c["severity"] == "block" and c["code"] not in ("customer_missing", "quantity_unreadable", "no_lines")
+    ]
     total = sum((Decimal(ln["line_total"]) for ln in lines if ln.get("line_total")), Decimal(0))
     paper_total = (data.get("total_written") or {}).get("value")
     return {
-        "document_id": str(document_id), "extraction_id": str(extraction.id), "currency": org.currency,
-        "customer": customer, "customer_as_written": written_customer,
+        "document_id": str(document_id),
+        "extraction_id": str(extraction.id),
+        "currency": org.currency,
+        "customer": customer,
+        "customer_as_written": written_customer,
         "order_number": (data.get("order_number") or {}).get("value"),
         "order_date": (data.get("order_date") or {}).get("value"),
         "delivery_date": (data.get("delivery_date") or {}).get("value"),
-        "lines": lines, "held": held, "blocks": blocks, "total": str(total),
-        "paper_total": paper_total, "warnings": [c["message"] for c in extraction.checks if c["severity"] == "warn"],
+        "lines": lines,
+        "held": held,
+        "blocks": blocks,
+        "total": str(total),
+        "paper_total": paper_total,
+        "warnings": [c["message"] for c in extraction.checks if c["severity"] == "warn"],
     }
 
 
@@ -114,8 +135,15 @@ def summary_of(p: dict[str, Any]) -> dict[str, Any]:
         text += f", delivery {p['delivery_date']}"
     if p["held"]:
         text += f". {len(p['held'])} line(s) held back and not ordered"
-    return {"text": text + ".", "lines": n, "total": p["total"], "currency": p["currency"],
-            "held": len(p["held"]), "blocks": p["blocks"], "can_approve": not p["blocks"]}
+    return {
+        "text": text + ".",
+        "lines": n,
+        "total": p["total"],
+        "currency": p["currency"],
+        "held": len(p["held"]),
+        "blocks": p["blocks"],
+        "can_approve": not p["blocks"],
+    }
 
 
 async def _stage(state: State) -> State:
@@ -150,25 +178,48 @@ async def _create(state: State) -> State:
         approval = await consume(db, uuid.UUID(state["approval_id"]), GATE, proposal)
         number = proposal["order_number"] or f"K-{await next_number(db, org_id, 'order'):05d}"
         order = Order(
-            org_id=org_id, number=number, customer_id=uuid.UUID(proposal["customer"]["id"]),
+            org_id=org_id,
+            number=number,
+            customer_id=uuid.UUID(proposal["customer"]["id"]),
             customer_name_as_written=proposal["customer_as_written"],
             order_date=date.fromisoformat(proposal["order_date"]) if proposal["order_date"] else date.today(),
             delivery_date=date.fromisoformat(proposal["delivery_date"]) if proposal["delivery_date"] else None,
-            currency=proposal["currency"], total=Decimal(proposal["total"]), source_document_id=doc_id,
-            approval_id=approval.id, created_by=approval.decided_by,
+            currency=proposal["currency"],
+            total=Decimal(proposal["total"]),
+            source_document_id=doc_id,
+            approval_id=approval.id,
+            created_by=approval.decided_by,
         )
         db.add(order)
         await db.flush()
         for ln in proposal["lines"]:
-            db.add(OrderLine(org_id=org_id, order_id=order.id, product_id=uuid.UUID(ln["product_id"]),
-                             description=ln["product_name"], quantity=Decimal(ln["quantity"]), unit=ln["unit"],
-                             unit_price=Decimal(ln["unit_price"]), line_total=Decimal(ln["line_total"])))
+            db.add(
+                OrderLine(
+                    org_id=org_id,
+                    order_id=order.id,
+                    product_id=uuid.UUID(ln["product_id"]),
+                    description=ln["product_name"],
+                    quantity=Decimal(ln["quantity"]),
+                    unit=ln["unit"],
+                    unit_price=Decimal(ln["unit_price"]),
+                    line_total=Decimal(ln["line_total"]),
+                )
+            )
         run.status, run.pending_approval_id = "done", None
         doc = await db.get(Document, doc_id)
         if doc:
             doc.status = "processed"
-        await audit(db, org_id, approval.decided_by, "order.created", "order", order.id, number=number,
-                    total=proposal["total"], approval_id=str(approval.id))
+        await audit(
+            db,
+            org_id,
+            approval.decided_by,
+            "order.created",
+            "order",
+            order.id,
+            number=number,
+            total=proposal["total"],
+            approval_id=str(approval.id),
+        )
     return {"order_id": str(order.id)}
 
 
@@ -209,15 +260,20 @@ async def start_order_intake(org_id: uuid.UUID, document_id: uuid.UUID, user_id:
         run = WorkflowRun(org_id=org_id, kind="order_intake", document_id=document_id, state={})
         db.add(run)
     await (await graph()).ainvoke(
-        {"org_id": str(org_id), "user_id": str(user_id) if user_id else None,
-         "document_id": str(document_id), "run_id": str(run.id)},
+        {
+            "org_id": str(org_id),
+            "user_id": str(user_id) if user_id else None,
+            "document_id": str(document_id),
+            "run_id": str(run.id),
+        },
         thread_config(org_id, run.id),
     )
     return run.id
 
 
-async def resume(org_id: uuid.UUID, user_id: uuid.UUID, run_id: uuid.UUID, action: str,
-                 overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+async def resume(
+    org_id: uuid.UUID, user_id: uuid.UUID, run_id: uuid.UUID, action: str, overrides: dict[str, Any] | None = None
+) -> dict[str, Any]:
     async with tenant_session(org_id, user_id) as db:
         run = await db.get(WorkflowRun, run_id)  # RLS: another tenant's run is simply not found
         if run is None:

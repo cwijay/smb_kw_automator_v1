@@ -10,8 +10,9 @@ def _money(v: Decimal, cur: str) -> str:
     return f"{cur} {v:,.2f}"
 
 
-def render_invoice(*, org: dict[str, Any], customer: dict[str, Any], invoice: dict[str, Any],
-                   lines: list[dict[str, Any]]) -> bytes:
+def render_invoice(
+    *, org: dict[str, Any], customer: dict[str, Any], invoice: dict[str, Any], lines: list[dict[str, Any]]
+) -> bytes:
     cur = invoice["currency"]
     pdf = FPDF(format="A4")
     pdf.set_auto_page_break(auto=True, margin=18)
@@ -24,8 +25,12 @@ def render_invoice(*, org: dict[str, Any], customer: dict[str, Any], invoice: di
     pdf.ln(4)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "", 10)
-    meta = [("Invoice", invoice["number"]), ("Issued", str(invoice["issue_date"])),
-            ("Due", str(invoice["due_date"])), ("Order", invoice.get("order_number") or "")]
+    meta = [
+        ("Invoice", invoice["number"]),
+        ("Issued", str(invoice["issue_date"])),
+        ("Due", str(invoice["due_date"])),
+        ("Order", invoice.get("order_number") or ""),
+    ]
     for k, v in meta:
         pdf.cell(28, 6, k)
         pdf.cell(0, 6, v, new_x="LMARGIN", new_y="NEXT")
@@ -51,8 +56,11 @@ def render_invoice(*, org: dict[str, Any], customer: dict[str, Any], invoice: di
         pdf.cell(widths[3], 7, _money(Decimal(ln["line_total"]), cur), align="R")
         pdf.ln()
     pdf.ln(2)
-    for label, value, bold in (("Subtotal", invoice["subtotal"], False), ("Tax", invoice["tax"], False),
-                               ("Total due", invoice["total"], True)):
+    for label, value, bold in (
+        ("Subtotal", invoice["subtotal"], False),
+        ("Tax", invoice["tax"], False),
+        ("Total due", invoice["total"], True),
+    ):
         pdf.set_font("Helvetica", "B" if bold else "", 10)
         pdf.cell(sum(widths[:3]), 7, label, align="R")
         pdf.cell(widths[3], 7, _money(Decimal(value), cur), align="R")

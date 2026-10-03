@@ -45,10 +45,17 @@ def _pdf_words(page: pdfium.PdfPage) -> list[dict[str, Any]]:
             bottom = min(b[1] for _, b in current)
             right = max(b[2] for _, b in current)
             top = max(b[3] for _, b in current)
-            words.append({
-                "text": text, "x": left / width, "y": 1 - top / height,
-                "w": (right - left) / width, "h": (top - bottom) / height, "conf": 1.0, "source": "text_layer",
-            })
+            words.append(
+                {
+                    "text": text,
+                    "x": left / width,
+                    "y": 1 - top / height,
+                    "w": (right - left) / width,
+                    "h": (top - bottom) / height,
+                    "conf": 1.0,
+                    "source": "text_layer",
+                }
+            )
         current.clear()
 
     for i in range(textpage.count_chars()):

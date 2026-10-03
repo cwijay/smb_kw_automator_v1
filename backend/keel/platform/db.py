@@ -61,9 +61,7 @@ async def _set_context(session: AsyncSession, org_id: uuid.UUID | None, user_id:
 
 
 @asynccontextmanager
-async def tenant_session(
-    org_id: uuid.UUID | None, user_id: uuid.UUID | None = None
-) -> AsyncIterator[AsyncSession]:
+async def tenant_session(org_id: uuid.UUID | None, user_id: uuid.UUID | None = None) -> AsyncIterator[AsyncSession]:
     """One transaction with the tenant context applied. Commits on success, rolls back on error."""
     async with sessionmaker()() as session, session.begin():
         await _set_context(session, org_id, user_id)

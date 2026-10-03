@@ -46,11 +46,15 @@ HANDLERS: dict[str, Handler] = {"process_document": _process_document}
 async def run_once() -> bool:
     """Claim and run one job. Returns False when the queue is empty."""
     async with global_session() as db:
-        row = (await db.execute(text(
-            "UPDATE jobs SET status='running', locked_at=now(), attempts=attempts+1 WHERE id = ("
-            " SELECT id FROM jobs WHERE status='queued' AND run_after <= now()"
-            " ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, org_id, kind, payload, attempts"
-        ))).first()
+        row = (
+            await db.execute(
+                text(
+                    "UPDATE jobs SET status='running', locked_at=now(), attempts=attempts+1 WHERE id = ("
+                    " SELECT id FROM jobs WHERE status='queued' AND run_after <= now()"
+                    " ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, org_id, kind, payload, attempts"
+                )
+            )
+        ).first()
     if row is None:
         return False
     try:
@@ -62,8 +66,10 @@ async def run_once() -> bool:
         log.error("job.failed", job=str(row.id), kind=row.kind, attempts=row.attempts)
     async with global_session() as db:
         await db.execute(
-            text("UPDATE jobs SET status=:s, last_error=:e, locked_at=NULL, "
-                 "run_after = now() + make_interval(secs => 5 * attempts) WHERE id=:id"),
+            text(
+                "UPDATE jobs SET status=:s, last_error=:e, locked_at=NULL, "
+                "run_after = now() + make_interval(secs => 5 * attempts) WHERE id=:id"
+            ),
             {"s": status, "e": error, "id": row.id},
         )
     return True

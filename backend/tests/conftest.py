@@ -6,9 +6,7 @@ from collections.abc import AsyncIterator
 
 os.environ.setdefault("KEEL_ENV", "test")
 os.environ.setdefault("KEEL_DATABASE_URL", "postgresql+psycopg://keel_app:keel_app@localhost:5432/keel_test")
-os.environ.setdefault(
-    "KEEL_DATABASE_OWNER_URL", "postgresql+psycopg://keel_owner:keel_owner@localhost:5432/keel_test"
-)
+os.environ.setdefault("KEEL_DATABASE_OWNER_URL", "postgresql+psycopg://keel_owner:keel_owner@localhost:5432/keel_test")
 os.environ.setdefault("KEEL_LLM_MODE", "fake")
 os.environ.setdefault("KEEL_STORAGE_DIR", "/tmp/keel-test-storage")
 
@@ -27,10 +25,16 @@ def database() -> None:
     _migrate()
     owner = create_engine(get_settings().database_owner_url)
     with owner.begin() as conn:
-        tables = conn.execute(
-            text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> 'alembic_version'"
-                 " AND tablename NOT LIKE 'checkpoint_migrations'")
-        ).scalars().all()
+        tables = (
+            conn.execute(
+                text(
+                    "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> 'alembic_version'"
+                    " AND tablename NOT LIKE 'checkpoint_migrations'"
+                )
+            )
+            .scalars()
+            .all()
+        )
         conn.execute(text("TRUNCATE " + ", ".join(tables) + " CASCADE"))
     owner.dispose()
 
@@ -55,8 +59,9 @@ async def anon(app: object) -> AsyncIterator[httpx.AsyncClient]:
 async def signup(app: object, org: str = "Acme Kulfi") -> httpx.AsyncClient:
     client = _client(app)
     email = f"{uuid.uuid4().hex[:10]}@example.com"
-    r = await client.post("/api/auth/signup", json={
-        "org_name": org, "name": "Owner", "email": email, "password": "correct-horse-battery"})
+    r = await client.post(
+        "/api/auth/signup", json={"org_name": org, "name": "Owner", "email": email, "password": "correct-horse-battery"}
+    )
     assert r.status_code == 200, r.text
     client.email = email  # type: ignore[attr-defined]
     return client

@@ -94,13 +94,29 @@ async def _order_out(db: Any, o: Order, with_lines: bool = False) -> OrderOut:
     cust = await db.get(Customer, o.customer_id) if o.customer_id else None
     lines = []
     if with_lines:
-        lines = [LineOut(description=ln.description, quantity=ln.quantity, unit=ln.unit, unit_price=ln.unit_price,
-                         line_total=ln.line_total)
-                 for ln in await db.scalars(select(OrderLine).where(OrderLine.order_id == o.id))]
-    return OrderOut(id=str(o.id), number=o.number, customer=cust.name if cust else None,
-                    customer_as_written=o.customer_name_as_written, order_date=o.order_date,
-                    delivery_date=o.delivery_date, status=o.status, currency=o.currency, total=o.total,
-                    source_document_id=str(o.source_document_id) if o.source_document_id else None, lines=lines)
+        lines = [
+            LineOut(
+                description=ln.description,
+                quantity=ln.quantity,
+                unit=ln.unit,
+                unit_price=ln.unit_price,
+                line_total=ln.line_total,
+            )
+            for ln in await db.scalars(select(OrderLine).where(OrderLine.order_id == o.id))
+        ]
+    return OrderOut(
+        id=str(o.id),
+        number=o.number,
+        customer=cust.name if cust else None,
+        customer_as_written=o.customer_name_as_written,
+        order_date=o.order_date,
+        delivery_date=o.delivery_date,
+        status=o.status,
+        currency=o.currency,
+        total=o.total,
+        source_document_id=str(o.source_document_id) if o.source_document_id else None,
+        lines=lines,
+    )
 
 
 @router.get("/orders", response_model=list[OrderOut])
@@ -138,9 +154,17 @@ async def issue_invoice(order_id: uuid.UUID, body: IssueIn, ctx: Ctx = Member) -
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
         inv = await invoicing.issue_invoice(db, ctx.org_id, order_id, body.approval_id, date.today())
         cust = await db.get(Customer, inv.customer_id) if inv.customer_id else None
-        return InvoiceOut(id=str(inv.id), number=inv.number, order_id=str(inv.order_id),
-                          customer=cust.name if cust else None, issue_date=inv.issue_date, due_date=inv.due_date,
-                          status=inv.status, currency=inv.currency, total=inv.total)
+        return InvoiceOut(
+            id=str(inv.id),
+            number=inv.number,
+            order_id=str(inv.order_id),
+            customer=cust.name if cust else None,
+            issue_date=inv.issue_date,
+            due_date=inv.due_date,
+            status=inv.status,
+            currency=inv.currency,
+            total=inv.total,
+        )
 
 
 @router.get("/invoices", response_model=list[InvoiceOut])
@@ -149,9 +173,19 @@ async def list_invoices(ctx: Ctx = Viewer) -> list[InvoiceOut]:
         out = []
         for inv in await db.scalars(select(Invoice).order_by(Invoice.created_at.desc()).limit(200)):
             cust = await db.get(Customer, inv.customer_id) if inv.customer_id else None
-            out.append(InvoiceOut(id=str(inv.id), number=inv.number, order_id=str(inv.order_id),
-                                  customer=cust.name if cust else None, issue_date=inv.issue_date,
-                                  due_date=inv.due_date, status=inv.status, currency=inv.currency, total=inv.total))
+            out.append(
+                InvoiceOut(
+                    id=str(inv.id),
+                    number=inv.number,
+                    order_id=str(inv.order_id),
+                    customer=cust.name if cust else None,
+                    issue_date=inv.issue_date,
+                    due_date=inv.due_date,
+                    status=inv.status,
+                    currency=inv.currency,
+                    total=inv.total,
+                )
+            )
         return out
 
 
@@ -167,27 +201,47 @@ async def invoice_pdf(invoice_id: uuid.UUID, ctx: Ctx = Viewer) -> Response:
         lines = (await db.scalars(select(InvoiceLine).where(InvoiceLine.invoice_id == inv.id))).all()
         pdf = render_invoice(
             org={"name": org.name if org else ""},
-            customer={"name": cust.name if cust else "", "address": cust.address if cust else None,
-                      "email": cust.email if cust else None},
-            invoice={"number": inv.number, "issue_date": inv.issue_date, "due_date": inv.due_date,
-                     "currency": inv.currency, "subtotal": inv.subtotal, "tax": inv.tax, "total": inv.total,
-                     "order_number": order.number if order else None},
-            lines=[{"description": ln.description, "quantity": ln.quantity, "unit_price": ln.unit_price,
-                    "line_total": ln.line_total} for ln in lines],
+            customer={
+                "name": cust.name if cust else "",
+                "address": cust.address if cust else None,
+                "email": cust.email if cust else None,
+            },
+            invoice={
+                "number": inv.number,
+                "issue_date": inv.issue_date,
+                "due_date": inv.due_date,
+                "currency": inv.currency,
+                "subtotal": inv.subtotal,
+                "tax": inv.tax,
+                "total": inv.total,
+                "order_number": order.number if order else None,
+            },
+            lines=[
+                {
+                    "description": ln.description,
+                    "quantity": ln.quantity,
+                    "unit_price": ln.unit_price,
+                    "line_total": ln.line_total,
+                }
+                for ln in lines
+            ],
         )
-    return Response(pdf, media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="{inv.number}.pdf"'})
+    return Response(
+        pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{inv.number}.pdf"'}
+    )
 
 
 @router.get("/invoices/export.csv")
 async def export_invoices(format: Literal["qbo", "xero"] = "qbo", ctx: Ctx = Viewer) -> Response:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
-        invoices = list((await db.scalars(select(Invoice).where(Invoice.status != "void")
-                                          .order_by(Invoice.number))).all())
+        invoices = list(
+            (await db.scalars(select(Invoice).where(Invoice.status != "void").order_by(Invoice.number))).all()
+        )
         rows = await invoicing.invoice_export_rows(db, invoices)
     body = qbo_invoices_csv(rows) if format == "qbo" else xero_invoices_csv(rows)
-    return Response(body, media_type="text/csv",
-                    headers={"Content-Disposition": f'attachment; filename="invoices-{format}.csv"'})
+    return Response(
+        body, media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="invoices-{format}.csv"'}
+    )
 
 
 @router.get("/dashboard", response_model=Dashboard)
@@ -195,23 +249,39 @@ async def dashboard(ctx: Ctx = Viewer) -> Dashboard:
     now = datetime.now(UTC)
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
         org = await db.get(Org, ctx.org_id)
-        count = lambda q: db.scalar(select(func.count()).select_from(q.subquery()))  # noqa: E731
-        unbilled = await db.execute(select(func.count(), func.coalesce(func.sum(Order.total), 0))
-                                    .where(Order.status == "approved"))
+
+        async def count(q: Any) -> int:
+            return int(await db.scalar(select(func.count()).select_from(q.subquery())) or 0)
+
+        unbilled = await db.execute(
+            select(func.count(), func.coalesce(func.sum(Order.total), 0)).where(Order.status == "approved")
+        )
         n_unbilled, v_unbilled = unbilled.one()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        usage = (await db.execute(select(func.coalesce(func.sum(UsageEvent.cost_usd), 0),
-                                         func.coalesce(func.sum(UsageEvent.pages), 0))
-                                  .where(UsageEvent.at >= month_start))).one()
+        usage = (
+            await db.execute(
+                select(
+                    func.coalesce(func.sum(UsageEvent.cost_usd), 0), func.coalesce(func.sum(UsageEvent.pages), 0)
+                ).where(UsageEvent.at >= month_start)
+            )
+        ).one()
         return Dashboard(
             currency=org.currency if org else "USD",
             to_review=await count(select(Document.id).where(Document.status == "needs_review")) or 0,
             pending_approvals=await count(select(Approval.id).where(Approval.status == "pending")) or 0,
-            unbilled_orders=n_unbilled, unbilled_value=Decimal(v_unbilled),
+            unbilled_orders=n_unbilled,
+            unbilled_value=Decimal(v_unbilled),
             orders_7d=await count(select(Order.id).where(Order.created_at >= now - timedelta(days=7))) or 0,
-            invoiced_30d=Decimal(await db.scalar(select(func.coalesce(func.sum(Invoice.total), 0))
-                                                 .where(Invoice.created_at >= now - timedelta(days=30))) or 0),
-            ai_spend_month_usd=Decimal(usage[0]), pages_month=int(usage[1]),
+            invoiced_30d=Decimal(
+                await db.scalar(
+                    select(func.coalesce(func.sum(Invoice.total), 0)).where(
+                        Invoice.created_at >= now - timedelta(days=30)
+                    )
+                )
+                or 0
+            ),
+            ai_spend_month_usd=Decimal(usage[0]),
+            pages_month=int(usage[1]),
         )
 
 

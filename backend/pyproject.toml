@@ -46,7 +46,7 @@ build-backend = "hatchling.build"
 packages = ["keel"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]

@@ -11,8 +11,19 @@ revision = "0002"
 down_revision = "0001"
 
 TENANT_TABLES = [
-    "documents", "pages", "extractions", "field_results", "field_citations", "chunks",
-    "customers", "products", "price_list", "orders", "order_lines", "invoices", "invoice_lines",
+    "documents",
+    "pages",
+    "extractions",
+    "field_results",
+    "field_citations",
+    "chunks",
+    "customers",
+    "products",
+    "price_list",
+    "orders",
+    "order_lines",
+    "invoices",
+    "invoice_lines",
     "workflow_runs",
 ]
 

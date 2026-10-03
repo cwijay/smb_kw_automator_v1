@@ -47,8 +47,16 @@ async def decide(run_id: uuid.UUID, body: DecisionIn, ctx: Ctx = Member) -> Deci
 @router.get("/approvals", response_model=list[PendingApproval])
 async def pending(ctx: Ctx = Viewer) -> list[PendingApproval]:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
-        rows = await db.scalars(select(Approval).where(Approval.status == "pending")
-                                .order_by(Approval.created_at.desc()).limit(50))
-        return [PendingApproval(id=str(a.id), gate=a.gate, summary=a.summary,
-                                document_id=a.staged_payload.get("document_id"),
-                                created_at=a.created_at.isoformat()) for a in rows]
+        rows = await db.scalars(
+            select(Approval).where(Approval.status == "pending").order_by(Approval.created_at.desc()).limit(50)
+        )
+        return [
+            PendingApproval(
+                id=str(a.id),
+                gate=a.gate,
+                summary=a.summary,
+                document_id=a.staged_payload.get("document_id"),
+                created_at=a.created_at.isoformat(),
+            )
+            for a in rows
+        ]

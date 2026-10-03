@@ -52,5 +52,11 @@ class LlmExtractor:
         usage = getattr(out["raw"], "usage_metadata", None) or {}
         tin, tout = int(usage.get("input_tokens", 0)), int(usage.get("output_tokens", 0))
         model_name = self.model_id.split(":", 1)[1]
-        return EngineResult(data=out["parsed"], engine=self.name, model=model_name, input_tokens=tin,
-                            output_tokens=tout, cost_usd=cost(model_name, tin, tout))
+        return EngineResult(
+            data=out["parsed"],
+            engine=self.name,
+            model=model_name,
+            input_tokens=tin,
+            output_tokens=tout,
+            cost_usd=cost(model_name, tin, tout),
+        )

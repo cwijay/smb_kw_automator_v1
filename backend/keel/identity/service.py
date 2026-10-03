@@ -50,8 +50,16 @@ async def _memberships(user_id: uuid.UUID) -> list[tuple[Membership, Org]]:
         return [(m, o) for m, o in rows.all()]
 
 
-async def signup(*, org_name: str, name: str, email: str, password: str, currency: str = "USD",
-                 country: str = "US", timezone: str = "America/New_York") -> str:
+async def signup(
+    *,
+    org_name: str,
+    name: str,
+    email: str,
+    password: str,
+    currency: str = "USD",
+    country: str = "US",
+    timezone: str = "America/New_York",
+) -> str:
     if len(password) < 10:
         raise Conflict("Use at least 10 characters for the password.", code="weak_password")
     # One transaction: user, org, owner membership and profile all land together or not at all.
@@ -109,8 +117,7 @@ async def verify_magic_link(token: str) -> str:
 async def resolve(token: str) -> Ctx:
     async with global_session() as db:
         row = await db.execute(
-            select(Session, User).join(User, User.id == Session.user_id)
-            .where(Session.token_hash == token_hash(token))
+            select(Session, User).join(User, User.id == Session.user_id).where(Session.token_hash == token_hash(token))
         )
         found = row.first()
         if found is None or found[0].expires_at < _now():
@@ -144,13 +151,23 @@ async def create_invite(ctx: Ctx, email: str, role: str) -> str:
     ttl = timedelta(days=get_settings().invite_ttl_days)
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
         existing = await db.scalar(
-            select(func.count()).select_from(Membership).join(User, User.id == Membership.user_id)
+            select(func.count())
+            .select_from(Membership)
+            .join(User, User.id == Membership.user_id)
             .where(Membership.org_id == ctx.org_id, User.email == email)
         )
         if existing:
             raise Conflict("That person is already a member.")
-        db.add(Invite(org_id=ctx.org_id, email=email, role=role, token_hash=digest, invited_by=ctx.user_id,
-                      expires_at=_now() + ttl))
+        db.add(
+            Invite(
+                org_id=ctx.org_id,
+                email=email,
+                role=role,
+                token_hash=digest,
+                invited_by=ctx.user_id,
+                expires_at=_now() + ttl,
+            )
+        )
         await audit(db, ctx.org_id, ctx.user_id, "invite.created", "invite", None, email=email, role=role)
     return token
 
@@ -165,8 +182,7 @@ async def preview_invite(token: str) -> dict[str, str]:
     return {"org_name": org_name or "", "email": row.email, "role": row.role}
 
 
-async def accept_invite(token: str, *, name: str | None, password: str | None,
-                        current: Ctx | None) -> str | None:
+async def accept_invite(token: str, *, name: str | None, password: str | None, current: Ctx | None) -> str | None:
     """Joins the org. Returns a new session token when a new account was created."""
     async with global_session() as db:
         row = (await db.execute(text("SELECT * FROM keel_find_invite(:h)"), {"h": token_hash(token)})).first()
@@ -194,29 +210,33 @@ async def accept_invite(token: str, *, name: str | None, password: str | None,
 async def list_members(ctx: Ctx) -> list[dict[str, str]]:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
         rows = await db.execute(
-            select(Membership, User).join(User, User.id == Membership.user_id)
-            .where(Membership.org_id == ctx.org_id).order_by(Membership.created_at)
+            select(Membership, User)
+            .join(User, User.id == Membership.user_id)
+            .where(Membership.org_id == ctx.org_id)
+            .order_by(Membership.created_at)
         )
         members = [{"user_id": str(u.id), "name": u.name, "email": u.email, "role": m.role} for m, u in rows]
-        invites = await db.execute(
-            select(Invite).where(Invite.accepted_at.is_(None), Invite.expires_at > _now())
-        )
-        pending = [{"invite_id": str(i.id), "email": i.email, "role": i.role, "name": "", "user_id": ""}
-                   for i in invites.scalars()]
+        invites = await db.execute(select(Invite).where(Invite.accepted_at.is_(None), Invite.expires_at > _now()))
+        pending = [
+            {"invite_id": str(i.id), "email": i.email, "role": i.role, "name": "", "user_id": ""}
+            for i in invites.scalars()
+        ]
     return members + [dict(p, role=f"invited:{p['role']}") for p in pending]
 
 
 async def change_role(ctx: Ctx, user_id: uuid.UUID, role: str) -> None:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
-        m = await db.scalar(select(Membership).where(Membership.org_id == ctx.org_id,
-                                                     Membership.user_id == user_id))
+        m = await db.scalar(select(Membership).where(Membership.org_id == ctx.org_id, Membership.user_id == user_id))
         if m is None:
             raise NotFound("Member not found.")
         if (m.role == "owner" or role == "owner") and not ctx.at_least("owner"):
             raise Forbidden("Only an owner can change owner roles.")
         if m.role == "owner" and role != "owner":
-            owners = await db.scalar(select(func.count()).select_from(Membership)
-                                     .where(Membership.org_id == ctx.org_id, Membership.role == "owner"))
+            owners = await db.scalar(
+                select(func.count())
+                .select_from(Membership)
+                .where(Membership.org_id == ctx.org_id, Membership.role == "owner")
+            )
             if owners == 1:
                 raise Conflict("An organisation needs at least one owner.")
         m.role = role
@@ -225,8 +245,7 @@ async def change_role(ctx: Ctx, user_id: uuid.UUID, role: str) -> None:
 
 async def remove_member(ctx: Ctx, user_id: uuid.UUID) -> None:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
-        m = await db.scalar(select(Membership).where(Membership.org_id == ctx.org_id,
-                                                     Membership.user_id == user_id))
+        m = await db.scalar(select(Membership).where(Membership.org_id == ctx.org_id, Membership.user_id == user_id))
         if m is None:
             raise NotFound("Member not found.")
         if m.role == "owner":

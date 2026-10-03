@@ -62,13 +62,20 @@ class ImportOut(BaseModel):
 
 
 def _customer_out(c: Customer) -> CustomerOut:
-    return CustomerOut(id=str(c.id), name=c.name, aliases=c.aliases, email=c.email, address=c.address,
-                       payment_terms_days=c.payment_terms_days)
+    return CustomerOut(
+        id=str(c.id),
+        name=c.name,
+        aliases=c.aliases,
+        email=c.email,
+        address=c.address,
+        payment_terms_days=c.payment_terms_days,
+    )
 
 
 def _product_out(p: Product) -> ProductOut:
-    return ProductOut(id=str(p.id), sku=p.sku, name=p.name, aliases=p.aliases, unit=p.unit,
-                      unit_price=p.unit_price, active=p.active)
+    return ProductOut(
+        id=str(p.id), sku=p.sku, name=p.name, aliases=p.aliases, unit=p.unit, unit_price=p.unit_price, active=p.active
+    )
 
 
 @router.get("/customers", response_model=list[CustomerOut])
@@ -149,8 +156,7 @@ async def import_products(file: UploadFile, ctx: Ctx = Admin) -> ImportOut:
             else:
                 db.add(Product(org_id=ctx.org_id, sku=sku, **fields))
                 created += 1
-        await audit(db, ctx.org_id, ctx.user_id, "products.imported", None, None, created=created,
-                    updated=updated)
+        await audit(db, ctx.org_id, ctx.user_id, "products.imported", None, None, created=created, updated=updated)
     return ImportOut(created=created, updated=updated)
 
 
@@ -158,7 +164,8 @@ async def import_products(file: UploadFile, ctx: Ctx = Admin) -> ImportOut:
 async def customer_prices(customer_id: uuid.UUID, ctx: Ctx = Viewer) -> list[PriceOut]:
     async with tenant_session(ctx.org_id, ctx.user_id) as db:
         rows = await db.execute(
-            select(PriceListEntry, Product).join(Product, Product.id == PriceListEntry.product_id)
+            select(PriceListEntry, Product)
+            .join(Product, Product.id == PriceListEntry.product_id)
             .where(PriceListEntry.customer_id == customer_id)
         )
         return [PriceOut(product_id=str(p.id), sku=p.sku, name=p.name, unit_price=e.unit_price) for e, p in rows]
@@ -173,8 +180,19 @@ async def set_customer_price(customer_id: uuid.UUID, body: PriceIn, ctx: Ctx = M
         if entry:
             entry.unit_price = body.unit_price
         else:
-            db.add(PriceListEntry(org_id=ctx.org_id, customer_id=customer_id, product_id=body.product_id,
-                                  unit_price=body.unit_price))
-        await audit(db, ctx.org_id, ctx.user_id, "price.set", "customer", customer_id,
-                    product_id=str(body.product_id), unit_price=str(body.unit_price))
+            db.add(
+                PriceListEntry(
+                    org_id=ctx.org_id, customer_id=customer_id, product_id=body.product_id, unit_price=body.unit_price
+                )
+            )
+        await audit(
+            db,
+            ctx.org_id,
+            ctx.user_id,
+            "price.set",
+            "customer",
+            customer_id,
+            product_id=str(body.product_id),
+            unit_price=str(body.unit_price),
+        )
     return await customer_prices(customer_id, ctx)
