@@ -2,7 +2,9 @@
 
 **Working name:** *Keel*, the back-office "operating system" for small businesses.
 **First verticals:** ice-cream franchisees and children's day-care centres.
-**Date:** 3 October 2026. **Status:** research-backed proposal (v1.2). The MVP stack decisions are final (see *Decisions*), and the cost model assumes no funding and no cloud credits.
+**Date:** 3 October 2026. **Status:** research-backed proposal (v1.3). The MVP stack decisions are final (see *Decisions*), and the cost model assumes no funding and no cloud credits.
+
+> **Update (v1.3): read the [product evaluation](PRODUCT_EVALUATION.md) first.** It narrows the first product to **small food producers** with one loop: paper order → invoice → batch → HACCP record → lot trace. It also sets a **two-component architecture** (Next.js frontend + one Python backend). This proposal stays as the long-term vision and technology reference, and Decisions D1–D7 still apply.
 
 > **What Keel is.** Glean is a search engine over a company's knowledge. Keel is different: it is a *bookkeeper, compliance officer and operations clerk* for businesses with 1–50 staff.
 >

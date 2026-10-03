@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keel Product Evaluation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky ledger-style contents rail on the left, one reading column on the right; rail collapses into a top "Contents" drawer on phones. */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --ink: #16201c;
+  --muted: #56645e;
+  --line: #dde3df;
+  --accent: #0e6b59;
+  --accent-soft: #e2f0eb;
+  --mark: #f6e7a3;
+  --code-bg: #eef2ef;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rail: 268px;
+  --col: 860px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+    --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+  --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: var(--accent); z-index: 50; transition: width .1s linear;
+}
+
+.shell {
+  display: grid; grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 48px; max-width: calc(var(--rail) + var(--col) + 48px + 64px);
+  margin: 0 auto; padding-inline: 32px; padding-block: 0 96px;
+}
+
+/* ---------- contents rail ---------- */
+.rail {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  align-self: start; max-height: 100vh; overflow-y: auto;
+  padding-block: 40px 24px;
+}
+.rail .brand {
+  font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em;
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
+}
+.rail .brand small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+.rail .tag { color: var(--muted); font-size: 13px; margin: 0 0 24px; line-height: 1.45; }
+.toc-label {
+  font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 8px;
+}
+.toc { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
+.toc a {
+  display: grid; grid-template-columns: 26px 1fr; gap: 4px; align-items: baseline;
+  padding: 5px 10px; margin-left: -1px; border-left: 2px solid transparent;
+  color: var(--muted); text-decoration: none; font-size: 14px; line-height: 1.35;
+}
+.toc a .n { font-family: var(--f-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.toc a:hover { color: var(--ink); }
+.toc a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+.rail .src-note { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* mobile contents drawer */
+.mnav { display: none; }
+
+/* ---------- main column ---------- */
+main { min-width: 0; padding-top: 40px; }
+.hero { padding-bottom: 32px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px;
+}
+.eyebrow span + span::before { content: "·"; margin-right: 14px; color: var(--line); }
+.hero h1 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(40px, 7vw, 68px);
+  line-height: 1; letter-spacing: -0.03em; margin: 16px 0 12px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 46ch; margin: 0; text-wrap: balance; }
+.stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  margin-top: 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden;
+}
+.stat { padding: 14px 16px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .v { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.stats-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+blockquote.lede {
+  margin: 28px 0 0; padding: 18px 22px; background: var(--accent-soft);
+  border-radius: 10px; font-size: 17px; line-height: 1.6;
+}
+blockquote.lede p { margin: 0 0 .6em; } blockquote.lede p:last-child { margin: 0; }
+blockquote.lede strong { color: var(--accent); }
+
+.sec { padding-top: 40px; }
+.sec + .sec { border-top: 1px solid var(--line); margin-top: 40px; }
+h2 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 34px);
+  letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 18px; text-wrap: balance;
+}
+h3 {
+  font-family: var(--f-display); font-weight: 500; font-size: 21px; letter-spacing: -0.01em;
+  margin: 32px 0 10px; text-wrap: balance;
+}
+p, li { max-width: 72ch; overflow-wrap: break-word; }
+ul, ol { padding-left: 1.3em; }
+li { margin: 4px 0; }
+li > ul, li > ol { margin: 4px 0; }
+strong { font-weight: 600; }
+hr { display: none; }
+code {
+  font-family: var(--f-mono); font-size: .86em; background: var(--code-bg);
+  padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere;
+}
+blockquote:not(.lede) {
+  margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--accent); color: var(--ink);
+}
+p strong:only-child { }
+mark, .hl { background: var(--mark); padding: 0 .15em; border-radius: 2px; }
+
+.table-wrap {
+  overflow-x: auto; margin: 16px 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+}
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th {
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); background: var(--code-bg); white-space: nowrap;
+}
+td:first-child { font-weight: 500; min-width: 130px; }
+td { font-variant-numeric: tabular-nums; }
+td code { font-size: .82em; }
+
+.code-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--line); }
+.code-wrap pre { margin: 0; padding: 16px 18px; }
+.code-wrap code { background: none; padding: 0; font-size: 13px; line-height: 1.55; overflow-wrap: normal; white-space: pre; }
+
+.diagram {
+  overflow-x: auto; margin: 18px 0 22px; padding: 16px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface);
+}
+.diagram pre.mermaid { margin: 0; background: none; font-family: var(--f-mono); font-size: 12px; }
+
+#totop {
+  position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-size: 18px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+
+/* ---------- narrow ---------- */
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-inline: 16px; }
+  .rail { display: none; }
+  .mnav {
+    display: block; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
+    margin-inline: -16px; padding-inline: 16px; background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .mnav summary {
+    list-style: none; cursor: pointer; padding-block: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    font-weight: 600; font-size: 15px;
+  }
+  .mnav summary::-webkit-details-marker { display: none; }
+  .mnav summary .cur { color: var(--muted); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .mnav summary::after { content: "▾"; color: var(--muted); }
+  .mnav[open] summary::after { content: "▴"; }
+  .mnav .toc { max-height: 60vh; overflow-y: auto; margin-bottom: 12px; }
+  main { padding-top: 20px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+</style>
+
+</head>
+<body>
+<div id="progress" aria-hidden="true"></div>
+
+<div class="shell">
+  <aside class="rail" aria-label="Contents">
+    <div class="brand">Keel <small>EVALUATION</small></div>
+    <p class="tag">End-to-end assessment and the improved product idea.</p>
+    <p class="toc-label">Contents</p>
+    <ol class="toc" id="toc">
+<li><a href="#1-verdict" data-target="1-verdict"><span class="n">1</span><span>Verdict</span></a></li>
+<li><a href="#2-what-is-strong-keep" data-target="2-what-is-strong-keep"><span class="n">2</span><span>What is strong (keep)</span></a></li>
+<li><a href="#3-what-is-weak-or-risky-change" data-target="3-what-is-weak-or-risky-change"><span class="n">3</span><span>What is weak or risky (change)</span></a></li>
+<li><a href="#4-the-improved-product" data-target="4-the-improved-product"><span class="n">4</span><span>The improved product</span></a></li>
+<li><a href="#5-competitive-check-for-the-new-focus" data-target="5-competitive-check-for-the-new-focus"><span class="n">5</span><span>Competitive check for the new focus</span></a></li>
+<li><a href="#6-two-component-architecture" data-target="6-two-component-architecture"><span class="n">6</span><span>Two-component architecture</span></a></li>
+<li><a href="#7-validate-before-building-2-weeks-about-0" data-target="7-validate-before-building-2-weeks-about-0"><span class="n">7</span><span>Validate before building (2 weeks, about $0)</span></a></li>
+<li><a href="#8-build-plan-after-validation" data-target="8-build-plan-after-validation"><span class="n">8</span><span>Build plan (after validation)</span></a></li>
+<li><a href="#9-what-this-means-for-the-existing-documents" data-target="9-what-this-means-for-the-existing-documents"><span class="n">9</span><span>What this means for the existing documents</span></a></li>
+    </ol>
+    <p class="src-note">Researched 3 Oct 2026. Prices are mostly from aggregators; re-check vendor pages before budgeting.</p>
+  </aside>
+
+  <main>
+    <details class="mnav" id="mnav">
+      <summary><span>Contents</span><span class="cur" id="mcur">Overview</span></summary>
+      <ol class="toc" id="mtoc">
+<li><a href="#1-verdict" data-target="1-verdict"><span class="n">1</span><span>Verdict</span></a></li>
+<li><a href="#2-what-is-strong-keep" data-target="2-what-is-strong-keep"><span class="n">2</span><span>What is strong (keep)</span></a></li>
+<li><a href="#3-what-is-weak-or-risky-change" data-target="3-what-is-weak-or-risky-change"><span class="n">3</span><span>What is weak or risky (change)</span></a></li>
+<li><a href="#4-the-improved-product" data-target="4-the-improved-product"><span class="n">4</span><span>The improved product</span></a></li>
+<li><a href="#5-competitive-check-for-the-new-focus" data-target="5-competitive-check-for-the-new-focus"><span class="n">5</span><span>Competitive check for the new focus</span></a></li>
+<li><a href="#6-two-component-architecture" data-target="6-two-component-architecture"><span class="n">6</span><span>Two-component architecture</span></a></li>
+<li><a href="#7-validate-before-building-2-weeks-about-0" data-target="7-validate-before-building-2-weeks-about-0"><span class="n">7</span><span>Validate before building (2 weeks, about $0)</span></a></li>
+<li><a href="#8-build-plan-after-validation" data-target="8-build-plan-after-validation"><span class="n">8</span><span>Build plan (after validation)</span></a></li>
+<li><a href="#9-what-this-means-for-the-existing-documents" data-target="9-what-this-means-for-the-existing-documents"><span class="n">9</span><span>What this means for the existing documents</span></a></li>
+      </ol>
+    </details>
+
+    <header class="hero" id="top">
+      <div class="eyebrow"><span>Product evaluation</span><span>Before implementation</span><span>3 Oct 2026</span></div>
+      <h1>Narrow it <em>down</em></h1>
+      <p class="sub">An honest look at Keel, lessons from three earlier repos, and a sharper first product: the paper-to-production back office for small food producers, built as two components.</p>
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><div class="v">1</div><div class="k">Vertical first: small food producers</div></div>
+        <div class="stat" role="listitem"><div class="v">6</div><div class="k">Steps in the core loop, order to lot trace</div></div>
+        <div class="stat" role="listitem"><div class="v">2</div><div class="k">Components: Next.js frontend, Python backend</div></div>
+        <div class="stat" role="listitem"><div class="v">2 wks</div><div class="k">Validation sprint before writing code</div></div>
+      </div>
+      <p class="stats-note">Scores and plans are judgement calls based on the research and code review; see §1 and §7.</p>
+      
+    </header>
+
+
+<section class="sec" id="sec-1-verdict" aria-labelledby="1-verdict"><h2 id="1-verdict">1. Verdict</h2>
+<p><strong>The problem is real and the technical plan is strong. But the product as currently framed is too broad to ship with one founder and no funding.</strong></p>
+<p>What is too broad: "Glean for SMBs" spread across two unrelated verticals, covering bookkeeping, tax, compliance, multi-tenant hierarchies, a learning loop and plugin export.</p>
+<p>The earlier attempts show the risk clearly:</p>
+<ul>
+<li><strong>9 months and about 100k lines of code</strong> across three repos (five, counting <code>biz2bricks-core</code> and <code>agent_builder_v1</code>);</li>
+<li><strong>four different auth and tenancy contracts</strong>;</li>
+<li>the one workflow that matters to a real customer (the design partner's order → production → HACCP → invoice) was <strong>designed in detail but never built</strong>.</li>
+</ul>
+<p><strong>The improvement is to narrow hard:</strong></p>
+<ul>
+<li><strong>one vertical</strong>: small food producers;</li>
+<li><strong>one end-to-end loop</strong>: paper order → invoice → batch → food-safety record → lot trace;</li>
+<li><strong>one design partner</strong>: the business behind the sample documents;</li>
+<li><strong>two code components</strong>: a Next.js frontend and one Python backend.</li>
+</ul>
+<p>Bookkeeping, tax and day care stay out until the first loop has paying users.</p>
+<h3 id="scorecard-1-weak-5-strong">Scorecard (1 = weak, 5 = strong)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Original proposal</th>
+<th>Improved idea</th>
+<th>Why it changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem severity</td>
+<td>4</td>
+<td><strong>5</strong></td>
+<td>Handwritten orders that are never invoiced lose revenue, and missing HACCP records are an inspection and recall risk. Both are pains owners <em>feel</em>, more than tidy books.</td>
+</tr>
+<tr>
+<td>Willingness to pay</td>
+<td>3</td>
+<td><strong>4</strong></td>
+<td>Selling "invoice every order the same day" and "pass the food-safety audit" is easier than selling "AI back office".</td>
+</tr>
+<tr>
+<td>Competition</td>
+<td>2</td>
+<td><strong>4</strong></td>
+<td>Bookkeeping and tax collide with Intuit, Xero JAX and Anthropic's free SMB plugin. Paper-first food-production operations sits between Jolt, FoodDocs and SafetyChain (food-safety apps that need digital entry) and MRP tools such as Katana and MRPeasy (also digital entry).</td>
+</tr>
+<tr>
+<td>Founder fit and unfair advantage</td>
+<td>3</td>
+<td><strong>5</strong></td>
+<td>You have real documents and a real business relationship (a design partner), plus working parsers, extractors and report generators.</td>
+</tr>
+<tr>
+<td>Solo feasibility (time to first paid use)</td>
+<td>1</td>
+<td><strong>4</strong></td>
+<td>A single loop on a two-component monolith, reusing proven code.</td>
+</tr>
+<tr>
+<td>Distribution</td>
+<td>2</td>
+<td><strong>3</strong></td>
+<td>Food-safety consultants, co-packers and distributors are a concentrated channel, much as accountants are for bookkeeping.</td>
+</tr>
+<tr>
+<td>Technical differentiation</td>
+<td>4</td>
+<td><strong>4</strong></td>
+<td>Unchanged: evidence down to the pixel, compile-once recipes, cost routing.</td>
+</tr>
+<tr>
+<td>Regulatory risk</td>
+<td>2</td>
+<td><strong>4</strong></td>
+<td>Drops children's data (day care) and tax filing (HMRC adviser registration). Food records are lower risk.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-2-what-is-strong-keep" aria-labelledby="2-what-is-strong-keep"><h2 id="2-what-is-strong-keep">2. What is strong (keep)</h2>
+<ol>
+<li><strong>Paper-first with evidence.</strong> No incumbent turns a photographed order pad or batch sheet into trusted, linked records that point back to the source pixels. The sample documents show this is the real state of these businesses:<ul>
+<li>handwritten orders with grouped pricing and crossed-out lines;</li>
+<li>QC batch sheets with handwritten lot numbers;</li>
+<li>HACCP forms with blank critical readings;</li>
+<li>no text layer on any scan.</li>
+</ul>
+</li>
+<li><strong>"Agents propose, code decides, humans approve."</strong> Food safety and invoicing need this level of trust.</li>
+<li><strong>Compile-once recipes and cost routing.</strong> Unit cost is about $3–5 per site per month against $99+ revenue. That margin survives price competition.</li>
+<li><strong>Linking documents to each other.</strong> Order ↔ work order ↔ batch lot ↔ HACCP ↔ invoice ↔ supplier lot is exactly what an earlier analysis found missing at the design partner ("no bridge from handwritten orders to production"). It is also what a recall requires.</li>
+<li><strong>Reusable assets.</strong> Parser abstraction, extractor tool chain, PDF/XLSX report generators, usage and quota tracking, PII middleware, bulk LangGraph jobs, and the frontend's extraction, chat and agent UI components (§6.3).</li>
+</ol>
+</section>
+<section class="sec" id="sec-3-what-is-weak-or-risky-change" aria-labelledby="3-what-is-weak-or-risky-change"><h2 id="3-what-is-weak-or-risky-change">3. What is weak or risky (change)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Evidence</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Scope is far too broad</strong></td>
+<td>The BRD covers 10 connectors, an agent builder, SSO/SCIM and SOC 2. The proposal covers two verticals, bookkeeping, tax, a franchisor hierarchy, cross-tenant learning and plugin export.</td>
+<td>Build one loop for one vertical. Every other feature waits for a paying user to ask for it.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>We were about to compete where the giants are</strong></td>
+<td>Bookkeeping and tax are being bundled free by Intuit and Xero, and Anthropic's small-business plugin (900k+ installs) does AP, month-end and tax prep.</td>
+<td><strong>Hand off to the ledger</strong> instead: a clean QuickBooks or Xero import and sync. Don't do bookkeeping.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>The persona doesn't match the evidence</strong></td>
+<td>The proposal targets an ice-cream <em>franchisee</em> (royalty reports, a POS). The samples come from a <em>small producer and wholesaler</em>: restaurant orders, kulfi batches, HACCP, work orders.</td>
+<td>Re-target to <strong>small food producers</strong>: kulfi/ice cream, bakeries, sauces, caterers, co-packers. Franchisees can come later with a royalty add-on.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Day care splits the effort and carries the most risk</strong></td>
+<td>Children's data, rules that vary by state or Ofsted, and entrenched incumbents (Brightwheel, Procare). There are no samples or design partner.</td>
+<td>Park it. Reconsider only once a day-care owner asks for it.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>We were selling the technology, not the outcome</strong></td>
+<td>"Semantic layer", "graph RAG" and "agents" mean nothing to a kulfi maker.</td>
+<td>Sell outcomes: <em>every order invoiced the same day</em>, <em>an audit-ready HACCP binder</em>, <em>a recall trace in 60 seconds</em>, <em>no lost orders</em>. The technology stays invisible.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Features built before validation</strong></td>
+<td>Cross-tenant learning needs many tenants. The franchisor hierarchy needs a franchisor. Plugin export needs traction.</td>
+<td>Move them to "after 10 paying sites".</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Architecture sprawl, a lesson from the old repos</strong></td>
+<td>Five repos, a shared ORM package, five frontend proxy families. Identity headers were trusted from the client, so knowing an email let you act as that user. Sessions were held in memory, and a table was created per organisation at runtime.</td>
+<td>Two components, one OpenAPI spec, cookie sessions verified in the backend, organisation IDs taken from the membership table, RLS, JSONB records. No in-process state.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>No validation gate before building</strong></td>
+<td>Nine months went into plumbing first.</td>
+<td>A two-week concierge test and kill criteria before writing code (§7).</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-4-the-improved-product" aria-labelledby="4-the-improved-product"><h2 id="4-the-improved-product">4. The improved product</h2>
+<h3 id="41-positioning">4.1 Positioning</h3>
+<blockquote class="lede">
+<p><strong>Keel: the paper-to-production back office for small food producers.</strong>
+Photograph an order, a batch sheet or a temperature log. Keel turns it into invoices, production records and an audit-ready food-safety file, with every number linked back to the paper it came from.</p>
+</blockquote>
+<ul>
+<li><strong>Who:</strong> owner-operated food producers and wholesalers with 3–50 staff. Examples: kulfi and ice-cream makers, bakeries, sauce and condiment makers, caterers, small co-packers. Start where the design partner is, with the UK or US as the second market.</li>
+<li><strong>Why now:</strong><ul>
+<li>Cheap vision models can finally read their paperwork.</li>
+<li>FDA's FSMA 204 traceability rule (compliance date pushed to July 2028 [U]) makes lot tracing a board-level topic for foods on the Food Traceability List. Check which of the partner's products are covered.</li>
+<li>Retailers and distributors increasingly demand HACCP and traceability records from small suppliers.</li>
+</ul>
+</li>
+</ul>
+<h3 id="42-the-one-loop-to-build-first">4.2 The one loop to build first</h3>
+<div class="code-wrap"><pre><code>① Order in         photo / email / WhatsApp of a handwritten order pad
+      ↓            → lines, SKU match (fuzzy, pg_trgm), math check (grouped pricing, strike-throughs, circled total)
+② Approve          owner taps ✓ (or fixes a highlighted field shown on the photo)
+      ↓
+③ Invoice out      invoice PDF + QuickBooks/Xero import file (the old QBO template) → emailed to customer
+      ↓            daily &quot;orders not yet invoiced&quot; check catches missed revenue
+④ Produce          approved orders → work order (base formula × batch scaling) → lot number
+      ↓
+⑤ Record           photo of the batch/QC sheet and HACCP log → structured record; blank or out-of-range
+      ↓            critical readings flagged as missing (absent ≠ zero), owner notified
+⑥ Trace &amp; prove    &quot;Which customers got lot L-1042?&quot; / &quot;Show the March HACCP file&quot; → answers with source pages,
+                   inspection binder PDF on demand
+</code></pre></div>
+<p><strong>Ask Keel (chat).</strong> It covers everything above: SQL over the records first, then search over SOPs and notes.</p>
+<h3 id="43-what-each-stage-needs-mapped-to-the-sample-documents">4.3 What each stage needs (mapped to the sample documents)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Sample-document type</th>
+<th>Key fields</th>
+<th>Validation</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Order</td>
+<td>Handwritten order pad (photo)</td>
+<td>Customer, date, order number, lines (SKU, quantity, price), total</td>
+<td>Line math, grouped pricing, strike-throughs, circled total = sum, known customer and SKU</td>
+<td>Order record and draft invoice</td>
+</tr>
+<tr>
+<td>Invoice</td>
+<td>QuickBooks import template (xlsx)</td>
+<td>Invoice number, customer, items, rates, tax</td>
+<td>Order ↔ invoice number reconciliation</td>
+<td>PDF, QBO/Xero CSV, email</td>
+</tr>
+<tr>
+<td>Batch / QC</td>
+<td>Scanned formula batch sheet</td>
+<td>Product, date, lot, preparer, ingredient lots and quantities, ticks</td>
+<td>Quantities match the base formula × scale; ingredient lots present</td>
+<td>Batch record linked to supplier lots</td>
+</tr>
+<tr>
+<td>HACCP</td>
+<td>Cooking/filling control record</td>
+<td>Times, temperatures, Brix, operator initials</td>
+<td>Critical limits from the HACCP plan (e.g. minimum fill temperature, minimum pack weight); blanks = missing</td>
+<td>CCP log, deviation alert, binder</td>
+</tr>
+<tr>
+<td>Work order</td>
+<td>ERP work-order report (scan)</td>
+<td>Products, quantities, gallons, premix</td>
+<td>Recipe (compile once, then replay)</td>
+<td>Production plan linked to orders</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="44-pricing-and-success-metrics">4.4 Pricing and success metrics</h3>
+<ul>
+<li><strong>Founding partner:</strong> free for 3 months, then $49/month in exchange for feedback and a case study.</li>
+<li><strong>Standard:</strong> <strong>$149 per site per month.</strong> Add-ons follow demand, e.g. a royalty pack for franchisees, or supplier invoices for cost of goods.</li>
+<li><strong>North-star metrics:</strong><ul>
+<li>the share of orders invoiced within 24 hours;</li>
+<li>$ of unbilled orders caught;</li>
+<li>HACCP record completeness %;</li>
+<li>time to answer a recall trace;</li>
+<li>the owner's admin hours saved per week.</li>
+</ul>
+</li>
+</ul>
+<h3 id="45-roadmap-after-the-loop-works">4.5 Roadmap after the loop works</h3>
+<ol>
+<li><strong>Supplier invoices to cost of goods per SKU.</strong> This is the "link invoices together" ask, and it gives margin per product.</li>
+<li><strong>More small food producers.</strong> Pack variants: bakery, sauces, caterers.</li>
+<li><strong>Food-safety consultant channel.</strong> Each consultant manages 10–50 producers, so this needs multi-organisation membership.</li>
+<li><strong>Franchisee add-on</strong> (royalty and ad fund) and <strong>franchisor view</strong>.</li>
+<li><strong>Learning across tenants</strong> (k-anonymous recipes), once there are more than 20 tenants.</li>
+<li><strong>Other verticals</strong> (day care etc.) as new packs, only when a design partner asks.</li>
+</ol>
+<hr />
+</section>
+<section class="sec" id="sec-5-competitive-check-for-the-new-focus" aria-labelledby="5-competitive-check-for-the-new-focus"><h2 id="5-competitive-check-for-the-new-focus">5. Competitive check for the new focus</h2>
+<p>These competitor details come from general knowledge and were not verified this session. Check them during discovery.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Examples</th>
+<th>Why small producers still use paper</th>
+<th>Keel's angle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Food-safety apps</td>
+<td>Jolt, FoodDocs, Safefood 360, SafetyChain</td>
+<td>Need tablets and digital entry at the line; often priced for larger plants</td>
+<td>Paper and photo stay the input; Keel digitises them afterwards</td>
+</tr>
+<tr>
+<td>MRP / inventory</td>
+<td>Katana, MRPeasy, Craftybase</td>
+<td>Need clean digital orders and BOMs</td>
+<td>Turns paper orders into structured data that can feed these tools later</td>
+</tr>
+<tr>
+<td>Bookkeeping</td>
+<td>QuickBooks, Xero (with built-in AI)</td>
+<td>Accept typed or imported data only</td>
+<td>Keel is the source: it produces the import file and syncs</td>
+</tr>
+<tr>
+<td>Horizontal AI</td>
+<td>ChatGPT, Claude SMB plugin</td>
+<td>No food-safety records, lot graph or approval-gated workflow</td>
+<td>Vertical depth and evidence</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-6-two-component-architecture" aria-labelledby="6-two-component-architecture"><h2 id="6-two-component-architecture">6. Two-component architecture</h2>
+<h3 id="61-the-two-components">6.1 The two components</h3>
+<div class="code-wrap"><pre><code>keel/
+├── frontend/          Next.js 15+ (App Router, React 19, Tailwind, TanStack Query) — PWA with camera capture
+│                      talks ONLY to the backend via same-origin /api (Next.js rewrite) — no CORS, no proxy families
+│                      typed client generated from backend OpenAPI in CI
+└── backend/           Python 3.12, FastAPI — one codebase, one container image, two run modes:
+                         `keel api`     HTTP API (Cloud Run service)
+                         `keel worker`  queue consumer / batch jobs (Cloud Run job or same service, flag-controlled)
+                       modules (a modular monolith, not services):
+                         identity/   auth (argon2 passwords, magic link, Google OAuth later), cookie sessions in
+                                     Postgres, orgs, memberships(user↔org, role), invites, roles (owner/admin/member/viewer)
+                         billing/    plans, quotas, usage meters (ported from core/usage), Stripe later
+                         files/      upload, signed URLs, storage abstraction (R2/GCS/local), keys by org UUID
+                         documents/  page parser (LiteParse → PP-OCRv5 → Luna → Gemini → ADE), validators, review queue
+                         domain/     customers, products/SKUs, orders, invoices, formulas, batches/lots, haccp_logs
+                         agents/     deepagents/LangGraph: intake, reconciliation, ask-Keel; tools call domain services
+                         search/     pgvector + full-text hybrid, graph (edges) queries
+                         semantic/   metric YAML (OSI-format) → SQL compiler, run_metric
+                         reports/    PDF/XLSX/binder generators (ported), QBO/Xero export
+                         audit/      append-only audit log, approvals ledger
+                         platform/   db (SQLAlchemy async + RLS session hook), config, logging/OTel, errors
+</code></pre></div>
+<p><strong>External services:</strong> Postgres (Docker locally, Neon in the cloud), object storage (MinIO/R2), model APIs.</p>
+<p><strong>One repo, one CI, one docker-compose.</strong></p>
+<h3 id="62-non-negotiables-lessons-from-the-old-repos">6.2 Non-negotiables (lessons from the old repos)</h3>
+<ol>
+<li>Identity comes <strong>only from a verified session cookie</strong> (httpOnly, Secure, SameSite=Lax). <code>org_id</code> comes from the membership table, never from a client header.</li>
+<li>Every request runs <code>SET LOCAL app.org_id = …</code> inside its transaction, and <strong>RLS policies</strong> enforce isolation on every tenant table.</li>
+<li><strong>UUIDs only</strong> for tenants in keys and paths (<code>{org_id}/docs/{doc_id}/...</code>), never organisation names.</li>
+<li><strong>No runtime DDL.</strong> Extracted records live in <code>records(org_id, type, schema_version, data jsonb, ...)</code> with typed domain tables for core entities.</li>
+<li><strong>No in-process state:</strong> sessions, rate limits, queues and caches go in Postgres (or Redis later).</li>
+<li><strong>One OpenAPI spec and one generated TypeScript client</strong>, regenerated and diff-checked in CI.</li>
+<li><strong>Tests gate deploys:</strong> pytest (unit, plus golden extraction evals), Vitest, and a Playwright smoke run of the loop. No <code>|| true</code>.</li>
+<li><strong>Model IDs in config</strong>; every LLM call logs tenant, model, tokens and $.</li>
+<li><strong>No file larger than about 400 lines</strong>, and one repository base class. This avoids the god files found in the old review.</li>
+</ol>
+<h3 id="63-reuse-map-from-the-earlier-repos">6.3 Reuse map from the earlier repos</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Port as-is (adapt imports)</th>
+<th>Port with changes</th>
+<th>Discard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agents/core/middleware</code> (resilience, PII safety, limits) → deepagents middleware</td>
+<td>Storage (<code>storage/base.py</code>, <code>gcs.py</code>, plus upload/download from <code>backend_api/app/services/document/*</code>) → keyed by org UUID, R2/GCS/local</td>
+<td><code>biz2bricks_core</code> as a separate package</td>
+</tr>
+<tr>
+<td><code>core/usage/*</code> (token extractors, quota checker, usage queue) + <code>seed_tiers.py</code></td>
+<td>Org, user and folder services → memberships, invites, RLS</td>
+<td><code>simple_auth.py</code>, in-memory session and token registries, <code>debug.py</code></td>
+</tr>
+<tr>
+<td>Extractor tools (field analyzer → schema → extractor, line items) + prompts</td>
+<td>Audit → one table plus an async writer</td>
+<td>Header-trust <code>get_org_id</code>, public organisation list plus self-join registration</td>
+</tr>
+<tr>
+<td><code>gemini_parse_util.py</code>, <code>parse_service.py</code> (hash cache) → provider-agnostic page parser</td>
+<td>Document agent tools split out of the 1,787-line <code>document/core.py</code></td>
+<td><code>rate_limiter.py</code>, <code>session_manager.py</code>, <code>executors.py</code>, <code>nest_asyncio</code></td>
+</tr>
+<tr>
+<td>Sheets agent tools (DuckDB) with a <code>sqlglot</code> guard</td>
+<td>RAG: Gemini File Search → pgvector + full text (keep <code>rag_search</code> citation formatting)</td>
+<td>Custom <code>QueryClassifier</code> / <code>LLMToolSelector</code></td>
+</tr>
+<tr>
+<td>Report outputs (PDF, XLSX, dashboard data)</td>
+<td>Per-organisation dynamic tables → JSONB <code>records</code></td>
+<td>Five frontend proxy route families, CORS docs, three deploy scripts</td>
+</tr>
+<tr>
+<td><code>bulk/state_graph.py</code> checkpointed job pattern</td>
+<td>Frontend: extraction steps, chat, excel-chat, reports, usage, charts, FileUpload, agent graph/runs UI → one typed client, cookie auth</td>
+<td>localStorage tokens, two generated type files</td>
+</tr>
+<tr>
+<td>Password hashing helpers from <code>security.py</code></td>
+<td>Your earlier food-production design docs (pg_trgm SKU match, formula scaling, HACCP CCP, shadow mode then human approval) → <strong>build them now as the core loop</strong></td>
+<td>BRD enterprise scope (SSO/SCIM/SOC 2/10 connectors) for now</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-7-validate-before-building-2-weeks-about-0" aria-labelledby="7-validate-before-building-2-weeks-about-0"><h2 id="7-validate-before-building-2-weeks-about-0">7. Validate before building (2 weeks, about $0)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>Pass bar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Shadow the design partner</strong> for one week: count orders, invoices, batch sheets and HACCP forms; time the admin work; note missed invoices</td>
+<td>At least 5 hours a week of admin, or at least one revenue leak found</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Concierge test.</strong> Process their real paperwork with a notebook and the existing parser (Luna and Gemini side by side), then hand back invoices and a HACCP binder by hand</td>
+<td>Owner says they'd pay; accuracy at least 95% per field after review routing</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>10 discovery calls</strong> with similar producers (local food associations, co-packers, food-safety consultants)</td>
+<td>At least 3 say they'd pay $99+/month; at least 1 more design partner</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Gold set:</strong> label 100+ real pages (orders, batch, HACCP)</td>
+<td>Sets the parser routing and becomes the regression test suite</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Kill or pivot criteria</strong></p>
+<ul>
+<li>Fewer than 3 of 10 producers would pay.</li>
+<li>Handwriting field accuracy stays below 95% even with review routing.</li>
+<li>The design partner stops using it weekly by week 6 of the pilot.</li>
+</ul>
+<p>If any one of these is hit, revisit the vertical, not the technology.</p>
+</section>
+<section class="sec" id="sec-8-build-plan-after-validation" aria-labelledby="8-build-plan-after-validation"><h2 id="8-build-plan-after-validation">8. Build plan (after validation)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Weeks</th>
+<th>Deliverable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1–2</td>
+<td>Monorepo, docker-compose, identity (sessions, organisations, memberships, invites), RLS, files, CI with tests gating deploys, generated client, Cloud Run + Neon pilot environment</td>
+</tr>
+<tr>
+<td>3–4</td>
+<td>Page parser + validators + review UI (photo with field boxes) for <strong>orders</strong>; SKU and customer matching; approval</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Invoices: PDF + QBO/Xero export + email; "unbilled orders" check</td>
+</tr>
+<tr>
+<td>6–7</td>
+<td>Batch/QC and HACCP records; critical-limit rules; missing-reading alerts; binder PDF</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Lot trace and Ask Keel (SQL first, then hybrid search); usage meter and quota</td>
+</tr>
+<tr>
+<td>9–10</td>
+<td>Pilot hardening with the design partner; second producer onboarded; pricing live</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-9-what-this-means-for-the-existing-documents" aria-labelledby="9-what-this-means-for-the-existing-documents"><h2 id="9-what-this-means-for-the-existing-documents">9. What this means for the existing documents</h2>
+<ul>
+<li><a href="proposal.html">PROPOSAL.md</a> stays as the long-term vision and technology reference. Its <strong>Decisions D1–D7 still hold</strong>: parser routing, models, embeddings, Postgres hybrid search, graph in Postgres, OSI semantic layer, free-tier hosting.</li>
+<li><strong>Changed priorities:</strong><ul>
+<li>the first vertical is small food producers, not franchisees or day care;</li>
+<li>bookkeeping becomes ledger hand-off only;</li>
+<li>the franchisor hierarchy, cross-tenant learning and pack export are deferred;</li>
+<li>the architecture is <strong>two components</strong> (§6).</li>
+</ul>
+</li>
+</ul></section>
+  </main>
+</div>
+
+<button id="totop" type="button" aria-label="Back to top" hidden>↑</button>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var heads = Array.prototype.slice.call(document.querySelectorAll('main h2[id]'));
+  var mnav = document.getElementById('mnav');
+  var mcur = document.getElementById('mcur');
+  var bar = document.getElementById('progress');
+  var totop = document.getElementById('totop');
+
+  function setActive(id) {
+    links.forEach(function (a) { a.classList.toggle('active', a.dataset.target === id); });
+    var a = links.find(function (l) { return l.dataset.target === id; });
+    if (a && mcur) mcur.textContent = a.textContent.trim();
+    var railLink = document.querySelector('.rail .toc a.active');
+    if (railLink && railLink.scrollIntoView) {
+      var r = railLink.getBoundingClientRect(), rail = document.querySelector('.rail').getBoundingClientRect();
+      if (r.top < rail.top || r.bottom > rail.bottom) railLink.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function onScroll() {
+    var y = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    totop.hidden = y < 600;
+    var current = null;
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].getBoundingClientRect().top <= 120) current = heads[i].id; else break;
+    }
+    if (current) setActive(current);
+    else { links.forEach(function (a) { a.classList.remove('active'); }); if (mcur) mcur.textContent = 'Overview'; }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  links.forEach(function (a) {
+    a.addEventListener('click', function () { if (mnav) mnav.open = false; });
+  });
+  totop.addEventListener('click', function () { window.scrollTo({ top: 0 }); });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});</script>
+</body>
+</html>
