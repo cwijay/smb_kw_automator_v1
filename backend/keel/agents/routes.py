@@ -84,5 +84,6 @@ async def ask(body: AskIn, ctx: Ctx = Viewer) -> StreamingResponse:
     return StreamingResponse(
         _stream(ctx, body),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        # no-transform: proxies (Next's gzip included) must not compress, which buffers the whole stream
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
     )

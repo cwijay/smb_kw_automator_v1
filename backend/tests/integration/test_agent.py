@@ -10,6 +10,8 @@ from tests.integration.test_order_loop import _catalog, _upload
 async def _ask(c: httpx.AsyncClient, message: str, conv: str | None = None) -> list[dict]:  # type: ignore[type-arg]
     r = await c.post("/api/agent/ask", json={"message": message, "conversation_id": conv or str(uuid.uuid4())})
     assert r.status_code == 200, r.text
+    # proxies (including Next's gzip) must not buffer the stream, or answers arrive all at once
+    assert "no-transform" in r.headers["cache-control"]
     return [json.loads(line[6:]) for line in r.text.splitlines() if line.startswith("data: ")]
 
 
