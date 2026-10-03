@@ -2,6 +2,7 @@
 
 A research-backed proposal for **Keel**: a multi-tenant agent platform that automates back-office knowledge work for small businesses. It is built as a coding agent with skills and tools. The first verticals are ice-cream franchisees and children's day care.
 
+- ✅ Final pre-implementation review (locked decisions): [`docs/FINAL_REVIEW.md`](docs/FINAL_REVIEW.md) · HTML: [`docs/final_review.html`](docs/final_review.html)
 - ⭐ Start here: product evaluation and improved idea: [`docs/PRODUCT_EVALUATION.md`](docs/PRODUCT_EVALUATION.md) · HTML: [`docs/product_evaluation.html`](docs/product_evaluation.html)
 - 📄 Full proposal: [`docs/PROPOSAL.md`](docs/PROPOSAL.md)
 - 🧭 Navigable HTML version: [`docs/proposal.html`](docs/proposal.html) (open in a browser)
