@@ -121,7 +121,7 @@ class OfflineModel(BaseChatModel):
                 data = json.loads(str(last.content))
             except json.JSONDecodeError:
                 data = {"error": str(last.content)}
-            text = _summarise(last.name or "", data) + "\n\n_(Offline mode: set OPENAI_API_KEY for full answers.)_"
+            text = _summarise(last.name or "", data) + "\n\n(Offline mode: set OPENAI_API_KEY for full answers.)"
             return ChatResult(generations=[ChatGeneration(message=AIMessage(content=text))])
         question = next((str(m.content) for m in reversed(messages) if isinstance(m, HumanMessage)), "")
         name, args = _route(question)

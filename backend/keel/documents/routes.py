@@ -13,7 +13,7 @@ from keel.api.deps import Member, Viewer
 from keel.audit.models import Approval
 from keel.audit.service import audit
 from keel.documents.models import Document, Extraction, FieldCitation, FieldResult, Page
-from keel.domain.models import WorkflowRun
+from keel.domain.models import Order, WorkflowRun
 from keel.files.storage import doc_key, storage
 from keel.identity.service import Ctx
 from keel.platform.config import get_settings
@@ -39,6 +39,7 @@ class DocumentOut(BaseModel):
     duplicate: bool = False
     run_id: str | None = None
     run_status: str | None = None
+    order_id: str | None = None
 
 
 class Box(BaseModel):
@@ -90,7 +91,9 @@ class CorrectionIn(BaseModel):
     value: Any
 
 
-def _doc_out(d: Document, run: WorkflowRun | None = None, duplicate: bool = False) -> DocumentOut:
+def _doc_out(
+    d: Document, run: WorkflowRun | None = None, duplicate: bool = False, order_id: uuid.UUID | None = None
+) -> DocumentOut:
     return DocumentOut(
         id=str(d.id),
         filename=d.filename,
@@ -103,6 +106,7 @@ def _doc_out(d: Document, run: WorkflowRun | None = None, duplicate: bool = Fals
         duplicate=duplicate,
         run_id=str(run.id) if run else None,
         run_status=run.status if run else None,
+        order_id=str(order_id) if order_id else None,
     )
 
 
@@ -198,6 +202,7 @@ async def detail(document_id: uuid.UUID, ctx: Ctx = Viewer) -> DocumentDetail:
                     )
                 )
         run = await _run_for(db, document_id)
+        order_id = await db.scalar(select(Order.id).where(Order.source_document_id == document_id))
         approval = None
         if run and run.pending_approval_id:
             a = await db.get(Approval, run.pending_approval_id)
@@ -206,7 +211,7 @@ async def detail(document_id: uuid.UUID, ctx: Ctx = Viewer) -> DocumentDetail:
                     id=str(a.id), gate=a.gate, status=a.status, summary=a.summary, proposal=a.staged_payload
                 )
         return DocumentDetail(
-            document=_doc_out(doc, run),
+            document=_doc_out(doc, run, order_id=order_id),
             pages=[
                 PageOut(id=str(p.id), n=p.n, width=p.width, height=p.height, has_text_layer=p.has_text_layer)
                 for p in pages

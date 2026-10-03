@@ -10,6 +10,34 @@
 
 ---
 
+## Implementation status (3 Oct 2026)
+
+**Built and verified:** M0, M1, M2 (minus tier-4 adapters), M3, M4, the Ask Keel part of M6, and a first version of the M7 onboarding seed.
+
+**Verification**
+- 16 backend integration tests on real Postgres.
+- 1 Playwright end-to-end loop test.
+- ruff, mypy --strict, eslint and tsc are all clean.
+
+**Not built yet**
+- M5: batch and HACCP records.
+- M6: lot trace and hybrid vector search.
+- Tier-4 adapters (Reducto, ADE, Sol).
+- The parser bake-off CLI.
+- The CI workflow and the Cloud Run deploy.
+
+**Divergences from the plan (each kept deliberately):**
+
+| Plan | Built | Why |
+|---|---|---|
+| AG-UI for agent streaming | Plain SSE endpoint (`/api/agent/ask`) with a small client reader | Fewer dependencies; same events (token, tool, tool_result, done) |
+| PP-OCRv5 via PaddleOCR | PP-OCR models via RapidOCR (ONNX runtime) | CPU-only, small install, no Paddle framework |
+| WeasyPrint invoices | fpdf2 | Pure Python; no system Pango libraries |
+| `halfvec(512)` | `vector(512)` column, populated later | Works with pgvector 0.6 (Ubuntu) as well as 0.8 |
+| pgmq queue | `jobs` table with `FOR UPDATE SKIP LOCKED` | No extension needed; works on any Postgres |
+| deepagents in order intake | Deterministic matching (rapidfuzz + aliases) inside the LangGraph workflow | Matching must be repeatable and hash-stable for approvals; deepagents powers Ask Keel |
+| Offline mode | Local rules extractor + offline tool-calling model | Lets the product run with no API keys and makes CI free |
+
 ## 0. Ground rules
 
 ### Repository and tooling

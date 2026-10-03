@@ -1,0 +1,47 @@
+# Local stack. `docker compose up` runs everything; or run only `postgres` and use `make dev`.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    command: sh -c "keel migrate && keel api --host 0.0.0.0"
+    environment: &backend_env
+      KEEL_DATABASE_URL: postgresql+psycopg://keel_app:keel_app@postgres:5432/keel
+      KEEL_DATABASE_OWNER_URL: postgresql+psycopg://keel_owner:keel_owner@postgres:5432/keel
+      KEEL_STORAGE_DIR: /data/storage
+      KEEL_FRONTEND_URL: http://localhost:3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      FIREWORKS_API_KEY: ${FIREWORKS_API_KEY:-}
+    volumes: [storage:/data/storage]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  worker:
+    build: ./backend
+    command: sh -c "sleep 5 && keel worker"
+    environment: *backend_env
+    volumes: [storage:/data/storage]
+    depends_on: [api]
+
+  web:
+    build: ./frontend
+    environment:
+      KEEL_API_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  storage:

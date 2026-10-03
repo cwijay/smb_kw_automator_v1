@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
     from keel.identity.routes import router as identity_router
     from keel.workflows.routes import router as workflow_router
 
-    app = FastAPI(title="Keel API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Keel API", version="0.1.0", lifespan=lifespan, generate_unique_id_function=lambda r: r.name)
     install_handlers(app)
     api = APIRouter(prefix="/api")
 
