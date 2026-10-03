@@ -64,7 +64,7 @@ The owner photographs, forwards or uploads the paper they already use. Keel turn
 
 ## Constraints
 
-- **Budget:** no funding and no cloud credits. Use free tiers (Cloud Run, Neon, R2), pay-per-use APIs only, no always-on GPUs. AI plus infrastructure must cost at most $5 per site per month.
+- **Budget:** no funding and no cloud credits. Use free tiers (Cloud Run, Neon, Cloud Storage), pay-per-use APIs only, no always-on GPUs. AI plus infrastructure must cost at most $5 per site per month.
 - **Team:** one founder, building with Claude Code. Exactly **two code components**: a Next.js frontend and one FastAPI backend (a modular monolith with API and worker run modes).
 - **Trust:**
   - every write that sends, spends, publishes or commits sits behind a separate, specific approval, enforced in code with an approval hash;

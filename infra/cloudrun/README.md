@@ -7,13 +7,12 @@
 | `keel-worker` | Cloud Run Job, run every minute by Cloud Scheduler | `keel worker --drain`: empties the queue and exits, so nothing idles |
 | `keel-migrate` | Cloud Run Job, run by each deploy | The only workload with the owner DB URL |
 | Postgres | Neon (free tier) | pgvector, pg_trgm and citext; roles from `neon-bootstrap.sql` |
-| Files | Cloudflare R2 (S3 API) | `KEEL_STORAGE_BACKEND=s3`; keys start with the org id |
+| Files | Google Cloud Storage bucket (private) | `KEEL_STORAGE_BACKEND=gcs`; the runtime service account is the only principal with object access, so there are no storage keys anywhere; keys start with the org id |
 
 **One-time setup**
 1. On Neon: run `neon-bootstrap.sql` with your own passwords.
-2. Create an R2 bucket and an access key scoped to it.
-3. `PROJECT=… REGION=… GITHUB_REPO=owner/repo ./infra/cloudrun/bootstrap.sh`, then add the secret values and the
-   GitHub repository variables it prints.
+2. `PROJECT=… REGION=… GITHUB_REPO=owner/repo ./infra/cloudrun/bootstrap.sh` (creates the files bucket too), then add
+   the secret values and the GitHub repository variables it prints.
 
 **Every deploy** (`.github/workflows/deploy.yml`, after CI is green on `main`, or run by hand): build and push the API
 image → run `keel-migrate` → deploy the API → build the web image with the API URL → deploy web → deploy the worker

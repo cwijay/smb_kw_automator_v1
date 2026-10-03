@@ -78,7 +78,7 @@ latency, by engine, document type and field. Engines without a key are skipped. 
 
 ## Deploy
 
-Cloud Run pilot: Neon Postgres, Cloudflare R2, a scheduled worker job, deploys gated on green CI. See
+Cloud Run pilot: Neon Postgres, a private Google Cloud Storage bucket (no storage keys: the service account authenticates), a scheduled worker job, deploys gated on green CI. See
 `infra/cloudrun/README.md`.
 
 CI (`.github/workflows/ci.yml`) runs the same checks on every push, then both Playwright journeys against a live stack, and fails if the generated API client is out of date.

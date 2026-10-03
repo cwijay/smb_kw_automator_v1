@@ -24,8 +24,7 @@ jobs:
     env:
       PROJECT: ${{ vars.GCP_PROJECT }}
       REGION: ${{ vars.GCP_REGION }}
-      S3_BUCKET: ${{ vars.KEEL_S3_BUCKET }}
-      S3_ENDPOINT_URL: ${{ vars.KEEL_S3_ENDPOINT_URL }}
+      GCS_BUCKET: ${{ vars.KEEL_GCS_BUCKET }}
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v5

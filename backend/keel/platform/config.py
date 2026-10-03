@@ -18,11 +18,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://keel_app:keel_app@localhost:5432/keel"
     database_owner_url: str = "postgresql+psycopg://keel_owner:keel_owner@localhost:5432/keel"
 
-    storage_backend: Literal["local", "s3"] = "local"
+    storage_backend: Literal["local", "gcs"] = "local"
     storage_dir: Path = Path("./var/storage")  # local backend
-    s3_bucket: str | None = None  # s3 backend: R2, MinIO or S3
-    s3_endpoint_url: str | None = None  # e.g. https://<account>.r2.cloudflarestorage.com
-    s3_region: str = "auto"
+    gcs_bucket: str | None = None  # gcs backend; credentials come from the runtime service account
+    gcs_endpoint: str = "https://storage.googleapis.com"
     frontend_url: str = "http://localhost:3000"
 
     session_cookie: str = "keel_session"

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-time GCP setup for the Keel pilot. Safe to re-run: existing resources are left alone.
-# Needs: gcloud (logged in as a project owner), a Neon database, an R2 bucket with an access key.
+# Needs: gcloud (logged in as a project owner) and a Neon database.
 #
-#   PROJECT=my-project REGION=us-central1 GITHUB_REPO=owner/repo ./infra/cloudrun/bootstrap.sh
+#   PROJECT=my-project REGION=us-central1 GITHUB_REPO=owner/repo [BUCKET=name] ./infra/cloudrun/bootstrap.sh
 #
 # Afterwards, set the GitHub repository variables it prints, add the secret values, and push to main.
 set -euo pipefail
@@ -10,7 +10,7 @@ set -euo pipefail
 gc() { gcloud --project "$PROJECT" "$@"; }
 exists() { "$@" >/dev/null 2>&1; }
 
-gc services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
+gc services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com storage.googleapis.com \
   cloudscheduler.googleapis.com iamcredentials.googleapis.com sts.googleapis.com
 
 exists gc artifacts repositories describe keel --location "$REGION" ||
@@ -26,7 +26,7 @@ MIGRATOR="keel-migrator@$PROJECT.iam.gserviceaccount.com"
 DEPLOYER="keel-deployer@$PROJECT.iam.gserviceaccount.com"
 
 # Secrets (values added separately, never in this script or in git).
-RUNTIME_SECRETS="keel-database-url keel-s3-access-key-id keel-s3-secret-access-key keel-openai-api-key keel-google-api-key"
+RUNTIME_SECRETS="keel-database-url keel-openai-api-key keel-google-api-key"
 for s in $RUNTIME_SECRETS keel-database-owner-url; do
   exists gc secrets describe "$s" || gc secrets create "$s" --replication-policy automatic
 done
@@ -36,6 +36,15 @@ done
 for s in keel-database-url keel-database-owner-url; do
   gc secrets add-iam-policy-binding "$s" --member "serviceAccount:$MIGRATOR" --role roles/secretmanager.secretAccessor >/dev/null
 done
+
+# Files bucket: private, uniform access, only the runtime service account can read/write objects.
+# No storage keys anywhere: Cloud Run uses the service account's own credentials.
+BUCKET="${BUCKET:-$PROJECT-keel-files}"
+exists gcloud storage buckets describe "gs://$BUCKET" ||
+  gcloud storage buckets create "gs://$BUCKET" --project "$PROJECT" --location "$REGION" \
+    --uniform-bucket-level-access --public-access-prevention
+gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member "serviceAccount:$RUNTIME" \
+  --role roles/storage.objectAdmin >/dev/null
 
 # Deployer: push images, deploy services/jobs, act as the two runtime identities.
 for role in roles/run.admin roles/artifactregistry.writer; do
@@ -78,7 +87,7 @@ Done. Next:
    GCP_PROJECT=$PROJECT  GCP_REGION=$REGION
    GCP_WIF_PROVIDER=$POOL/providers/github
    GCP_DEPLOY_SA=$DEPLOYER
-   KEEL_S3_BUCKET=<r2 bucket>  KEEL_S3_ENDPOINT_URL=https://<account>.r2.cloudflarestorage.com
+   KEEL_GCS_BUCKET=$BUCKET
 3. Push to main. deploy.yml runs after CI is green. The first run creates keel-worker; the scheduler
    created above starts it every minute from then on.
 OUT

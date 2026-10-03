@@ -44,6 +44,7 @@ profile, `keel-onboard` / `keel-router` skills, optional Langfuse tracing, CI, a
 | deepagents in order intake | Deterministic matching (rapidfuzz + aliases) inside the LangGraph workflow | Matching must be repeatable and hash-stable for approvals; deepagents powers Ask Keel |
 | One workflow per document kind | One LangGraph engine (stage → gate → commit) with a `Flow` per kind (order, batch, HACCP) | Same gate, hash binding and resume logic for every kind; a new kind is one file |
 | `halfvec(512)` + RRF of full-text and vectors | `vector(512)` + RRF of three signals: full-text, pg_trgm word similarity, vectors (live only) | Trigram matching catches misspelled names that embeddings miss, works offline at zero cost, and keeps offline search honest instead of faking vectors |
+| Files in Cloudflare R2 (`S3Storage`) | Google Cloud Storage over its JSON API (httpx + Application Default Credentials) | We deploy on GCP: the Cloud Run service account authenticates, so no storage keys exist to leak or rotate, and no S3 SDK ships in the image. R2's free egress doesn't matter at pilot volume |
 | Offline mode | Local rules extractor + offline tool-calling model | Lets the product run with no API keys and makes CI free |
 
 ## 0. Ground rules
@@ -372,7 +373,7 @@ Jobs:
 - `infra/cloudrun/`:
   - `api.yaml`, `worker-job.yaml`;
   - Neon connection through Secret Manager;
-  - R2 bucket.
+  - a private Cloud Storage bucket (the runtime service account is the only principal with access).
 - `.github/workflows/deploy.yml`: runs on main, only after CI is green.
 - Langfuse wiring.
 

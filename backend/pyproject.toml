@@ -27,13 +27,11 @@ dependencies = [
   "langchain-openai>=1.6",
   "langchain-google-genai>=4.4",
   "langchain-fireworks>=1.7",
+  "google-auth[requests]>=2.40",
 ]
 
 [project.optional-dependencies]
 ocr = ["rapidocr>=3.0", "onnxruntime>=1.20"]
-cloud = [
-    "boto3>=1.40",
-]
 observability = [
     "langfuse>=3",
 ]
