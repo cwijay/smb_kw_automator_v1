@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import "./console";
 import path from "node:path";
 
 const shots = process.env.SHOTS_DIR;
