@@ -24,7 +24,7 @@
 | **Why us, why now** | Three things became cheap in 2026: <br>• Open-weight frontier models: GLM-5.3, Kimi K3, DeepSeek V4. <br>• Small OCR models that beat frontier models on document benchmarks: PaddleOCR-VL-1.5, GLM-OCR, MinerU2.5. <br>• Agent harnesses with skills: deepagents 0.7. <br>The architecture comes from two of your repos: the "agents propose, code decides, humans approve" pattern from `recon_knowledge_work_agent_v2` and the governed semantic layer from `edm_sementic_layer_v3.0`. |
 | **Differentiators** | 1. Every figure is traceable to the exact pixels it came from. <br>2. Compile-once recipes, so cost per document falls over time. <br>3. Hierarchical multi-tenancy (franchisor → franchisee → location; accounting firm → clients). <br>4. Vertical compliance packs. <br>5. Governed cross-tenant learning that gets better with every customer. <br>6. Open Agent-Skills packs that also run *inside* Claude and ChatGPT. Their distribution becomes ours. |
 | **Cost target** | ≤ **$12 per location per month** in AI and infrastructure cost (estimate), against a price of **$99–249 per location per month**. That is a gross margin above 90%. |
-| **Stack** | deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector) and the context graph (Apache AGE), so there is no separate Neo4j. Model access goes through OpenRouter with our own keys, routed by tier. |
+| **Stack** | deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector), BM25 keyword search (pg_textsearch) and the context graph (typed edge tables and recursive CTEs), so there is no separate graph database. Everything runs on Cloud SQL (see the [technical deep-dive](TECH_DEEP_DIVE.md)). Model access goes through OpenRouter with our own keys, routed by tier. |
 | **First 90 days** | MVP for one vertical (day care: UK + US). Then one franchisor pilot (ice cream). Then the accountant channel. |
 
 ---
@@ -173,7 +173,7 @@ flowchart TB
   subgraph Core["Tenant Core (Postgres + RLS)"]
     EV[(Evidence store: docs, pages, fields, bboxes, confidence)]
     LG[(Ledger: entities, txns, journals per location)]
-    CG[(Context graph: Apache AGE + pgvector)]
+    CG[(Context graph: edge tables + recursive CTEs + pgvector)]
     SL[Semantic layer: governed metrics YAML]
     OB[(Obligations: contracts, certs, deadlines, ratios, temp limits)]
     TR[(Agent traces + decisions audit)]
@@ -259,7 +259,7 @@ The shape is the one already proven in `recon_knowledge_work_agent_v2` (`assembl
 | 1 | Scans and photos | **PaddleOCR-VL-1.5** (Apache-2.0, OmniDocBench v1.5 94.5) or **GLM-OCR** (MIT, 0.9B; API ≈ $0.10 per 1k pages). Both return bounding boxes. | $0.0001–0.0005 |
 | 2 | OCR text → typed JSON (`Invoice`, `DeliveryNote`, `Timesheet`, `TempLog`, `MealCount`, …) | **GPT-6 Luna** ($0.10/$0.50 per M tokens), or **DeepSeek V4.1 Flash** off-peak ($0.15/$0.60) | $0.0003–0.001 |
 | 3 | A validator fails, a field's confidence is low, or handwriting is detected | **Gemini 3.8 Flash** with the page image (Batch/Flex is half price; the price **doubles on 1 Jan 2027**, so budget for $1.50/$7.50) | $0.002–0.006 |
-| 4 | Still failing, or a critical handwritten field (amount, date, signature) | **LandingAI ADE, DPT-3 Pro** (handwriting, line-level grounding, ≈ 0.6–1¢), or **Reducto** Extract (2¢) | $0.006–0.02 |
+| 4 | Still failing, or a critical handwritten field (amount, date, signature) | **LandingAI ADE Gen2, DPT-3 Pro** (handwriting, line-level grounding; about 2–3¢ priority, about half on the standard async tier), or **Reducto** Extract (2¢) | $0.01–0.03 |
 | H | Still uncertain | Human review queue: a side-by-side bounding-box viewer with one-tap fixes. **Every fix becomes training signal** (§6). | Owner's time |
 
 **Blended estimate:** **$1.5–3 per 1,000 pages**, assuming 70% stop at tiers 0–2, 25% at tier 3 and 5% at tier 4. Sending every page to a premium API would cost $6–40 per 1,000.
@@ -282,7 +282,7 @@ Also assume most small-business scans have **no text layer**: phone photos and p
 
 ### 4.5 Semantic layer and context graph: the per-tenant "business brain"
 
-This part is adapted from `edm_sementic_layer_v3.0` (Prism). The big change is that the graph lives in **Postgres + Apache AGE + pgvector instead of Neo4j**: one database to run, RLS-native, and cheap.
+This part is adapted from `edm_sementic_layer_v3.0` (Prism). The big change is that the graph lives in **plain Postgres instead of Neo4j**. It is stored as typed tables plus a generic `edges(tenant_id, src, rel, dst, valid_from, valid_to, provenance)` table, with recursive CTEs for 1–4 hop traversals and pgvector next to it. Apache AGE was dropped because it is not offered on Cloud SQL or AlloyDB. The result is one managed database, native row-level security, and low cost. Graph access sits behind a repository interface (`neighbors`, `trace_lot`, `find_paths`), so a Neo4j or Spanner Graph projection can be added later without rewriting agents. See the [technical deep-dive §5](TECH_DEEP_DIVE.md).
 
 **Ontology (core plus pack extensions)**
 
@@ -432,7 +432,8 @@ flowchart LR
 |---|---|---|---|
 | Classification, extraction → JSON, summaries, notifications | GPT-6 Luna | DeepSeek V4.1 Flash (off-peak batch), Qwen3.5 Flash | High volume, schema-constrained, cheap |
 | Supervisor, tool-calling chat, bookkeeping reasoning | GLM-5.3 (or GLM-5.2 on DeepInfra at about $0.75/$2.40) | Gemini 3.8 Flash, DeepSeek V4 Pro off-peak | Strong tool calling (GLM-5.2 scores 99.1 on τ²-bench); open weights allow self-hosting later |
-| Vision re-read, handwriting | Gemini 3.8 Flash (Batch/Flex) | GPT-6 Luna vision; ADE DPT-3 Pro for grounded output | Best price/quality on images |
+| Page parsing (printed scans) | GPT-6 Luna, `reasoning.effort=none`, Batch | Gemini 3.8 Flash (thinking LOW, media_resolution MEDIUM) | Luna is about 7–14× cheaper per page; Gemini's price doubles on 1 Jan 2027 |
+| Vision re-read, handwriting | Gemini 3.8 Flash (thinking LOW) or ADE DPT-3 Pro | Qwen3-VL-8B self-hosted; Gemini 3.1 Pro for the hardest fields | Decided per field by measured gold-set accuracy |
 | Recipe engineer (coding), contract review, tax-pack review | Kimi K3 or GPT-6.1 Sol | Claude (when the budget allows) | Runs rarely and its cost is spread across every later run; quality matters most here |
 
 **Cost levers**
@@ -466,21 +467,21 @@ Assumes about 800 pages a month, 60 chat turns, and one month-end close.
 | Agent harness | **deepagents 0.7.x** (skills, subagents, `CompositeBackend`, `FilesystemPermission`, sandboxes) | Matches the paid-media agent and recon v2; skills follow the open standard |
 | Orchestration | **LangGraph 1.2, self-hosted** inside FastAPI, with `langgraph-checkpoint-postgres` | Avoids LangSmith Deployment per-minute uptime fees while we are early; Managed Deep Agents is US-only beta |
 | Observability | OpenTelemetry → self-hosted **Langfuse** (or the LangSmith free/Plus tier) | Cost and traces per tenant |
-| Database | **Postgres 17** (Neon/Supabase to start): RLS, pgvector, Apache AGE, pgmq for queues | One database handles OLTP, vectors, graph and queue |
+| Database | **Postgres 17 on Cloud SQL** (Docker locally): RLS, pgvector (halfvec), pg_textsearch BM25, edge tables for the graph, a queue table | One managed database handles OLTP, vectors, keyword search, the graph and the queue |
 | Blob storage | Cloudflare R2 (no egress fees) with per-tenant prefixes and keys | Cheap |
 | Sandbox | Modal or E2B (scale to zero); Docker + gVisor for self-hosting | Recipe engineer only |
-| OCR serving | PaddleOCR-VL / GLM-OCR on serverless GPU (Modal/RunPod), scaled to zero; GLM-OCR API as a bridge | Low SMB volume means we must not pay for an idle GPU |
+| OCR serving | Locally: GLM-OCR or PaddleOCR-VL via Ollama or MLX. On GCP: Cloud Run **jobs** on an L4 GPU (scale to zero, about $1.05/hr) for nightly batches, and CPU Cloud Run for Tesseract/PP-OCRv5 triage | Low SMB volume means we must not pay for an idle GPU; use APIs until volume justifies GPUs |
 | Frontend | **Next.js 15 + React**, `assistant-ui` / LangGraph `useStream`, PDF.js bounding-box overlay viewer, shadcn/ui; installable PWA for the camera | |
 | Auth / tenancy | Clerk or WorkOS (organisations, invitations, SSO later) → JWT claims `org_id, business_id, location_ids, role` | |
 | Messaging | WhatsApp Business Cloud API, Postmark inbound email | Paper-first intake |
-| Infrastructure | Fly.io or Cloud Run + Neon, with Terraform | Low fixed cost |
+| Infrastructure | Local: docker-compose. GCP: Cloud Run (API, workers, jobs) + Cloud SQL + GCS + Secret Manager, with Terraform | Low fixed cost; one cloud |
 
 **What to reuse from your repos**
 
 | From | Take |
 |---|---|
 | `recon_knowledge_work_agent_v2` | The `assembly.py` pattern, supervisor plus `recipe_engineer` `CompiledSubAgent`, `InvocationGuardMiddleware` / `ToolSurfacePolicy`, `OffloadMiddleware`, `RedactionMiddleware`, sandbox interface, gate spine with `PostgresSaver`, append-only `run_decisions`, versioned `recipes` table keyed by layout fingerprint, flow-YAML-driven UI, scripted-model test harness. *Add:* real auth and RBAC, Postgres RLS, generic entities (remove the hard-wired `ENTITIES=("affiliate",)`), multiple model providers. |
-| `edm_sementic_layer_v3.0` | Governed metric YAML, hybrid retrieval with RRF (reciprocal rank fusion), gateway pattern (MCP, JWT identity, handles not rows, audit, SQL guard), role-gating checked in four places, traces, confirm-and-distill loop with anti-poisoning rules, deterministic evals with canaries. *Change:* Neo4j becomes AGE + pgvector; add tenant dimension and write actions; move the result store into Redis/Postgres. |
+| `edm_sementic_layer_v3.0` | Governed metric YAML, hybrid retrieval with RRF (reciprocal rank fusion), gateway pattern (MCP, JWT identity, handles not rows, audit, SQL guard), role-gating checked in four places, traces, confirm-and-distill loop with anti-poisoning rules, deterministic evals with canaries. *Change:* Neo4j becomes Postgres edge tables + pgvector (optional Neo4j projection later); add tenant dimension and write actions; move the result store into Redis/Postgres. |
 | `langchain-ai/paid-media-agent` | Write-policy TOML, exact-proposal approval cards, offload with provenance metadata, scheduled reports, deny-by-default tool authorisation. |
 | `anthropics/knowledge-work-plugins/small-business` | The *shared rule* files (absent-is-not-zero, untrusted-content, tenant-scope, currency-and-locale), the two-approval rule for money, and the structure of `ap-processor`, `month-end-prep`, `payroll-prep` and `tax-season-organizer`, which we can port into `core-bookkeeping` (check the repo licence first). |
 

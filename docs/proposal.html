@@ -206,7 +206,7 @@ td code { font-size: .82em; }
 
 <div class="shell">
   <aside class="rail" aria-label="Contents">
-    <div class="brand">Keel <small>PROPOSAL v1</small></div>
+    <div class="brand">Keel <small>PROPOSAL v1.1</small></div>
     <p class="tag">Back-office OS for small businesses. Multi-tenant, skills-based, cost-routed.</p>
     <p class="toc-label">Contents</p>
     <ol class="toc" id="toc">
@@ -254,7 +254,7 @@ td code { font-size: .82em; }
     </details>
 
     <header class="hero" id="top">
-      <div class="eyebrow"><span>Start-up proposal</span><span>v1</span><span>3 Oct 2026</span></div>
+      <div class="eyebrow"><span>Start-up proposal</span><span>v1.1</span><span>3 Oct 2026</span></div>
       <h1>Keel<em>.</em></h1>
       <p class="sub">The back-office operating system for small businesses. First verticals: ice-cream franchisees and children's day care.</p>
       <div class="stats" role="list">
@@ -277,6 +277,7 @@ td code { font-size: .82em; }
 <hr />
 
     </header>
+
 
 <section class="sec" id="sec-0-summary-for-the-impatient-vp" aria-labelledby="0-summary-for-the-impatient-vp"><h2 id="0-summary-for-the-impatient-vp">0. Summary for the impatient VP</h2>
 <div class="table-wrap"><table>
@@ -309,7 +310,7 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td><strong>Stack</strong></td>
-<td>deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector) and the context graph (Apache AGE), so there is no separate Neo4j. Model access goes through OpenRouter with our own keys, routed by tier.</td>
+<td>deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector), BM25 keyword search (pg_textsearch) and the context graph (typed edge tables and recursive CTEs), so there is no separate graph database. Everything runs on Cloud SQL (see the <a href="tech_deep_dive.html">technical deep-dive</a>). Model access goes through OpenRouter with our own keys, routed by tier.</td>
 </tr>
 <tr>
 <td><strong>First 90 days</strong></td>
@@ -600,7 +601,7 @@ td code { font-size: .82em; }
   subgraph Core[&quot;Tenant Core (Postgres + RLS)&quot;]
     EV[(Evidence store: docs, pages, fields, bboxes, confidence)]
     LG[(Ledger: entities, txns, journals per location)]
-    CG[(Context graph: Apache AGE + pgvector)]
+    CG[(Context graph: edge tables + recursive CTEs + pgvector)]
     SL[Semantic layer: governed metrics YAML]
     OB[(Obligations: contracts, certs, deadlines, ratios, temp limits)]
     TR[(Agent traces + decisions audit)]
@@ -739,8 +740,8 @@ td code { font-size: .82em; }
 <tr>
 <td>4</td>
 <td>Still failing, or a critical handwritten field (amount, date, signature)</td>
-<td><strong>LandingAI ADE, DPT-3 Pro</strong> (handwriting, line-level grounding, ≈ 0.6–1¢), or <strong>Reducto</strong> Extract (2¢)</td>
-<td>$0.006–0.02</td>
+<td><strong>LandingAI ADE Gen2, DPT-3 Pro</strong> (handwriting, line-level grounding; about 2–3¢ priority, about half on the standard async tier), or <strong>Reducto</strong> Extract (2¢)</td>
+<td>$0.01–0.03</td>
 </tr>
 <tr>
 <td>H</td>
@@ -769,7 +770,7 @@ td code { font-size: .82em; }
 </ul>
 <p>Also assume most small-business scans have <strong>no text layer</strong>: phone photos and photocopied forms go straight to tier 1 OCR. Validators need handwriting-specific rules for grouped prices, crossed-out lines, circled totals and tick marks.</p>
 <h3 id="45-semantic-layer-and-context-graph-the-per-tenant-business-brain">4.5 Semantic layer and context graph: the per-tenant "business brain"</h3>
-<p>This part is adapted from <code>edm_sementic_layer_v3.0</code> (Prism). The big change is that the graph lives in <strong>Postgres + Apache AGE + pgvector instead of Neo4j</strong>: one database to run, RLS-native, and cheap.</p>
+<p>This part is adapted from <code>edm_sementic_layer_v3.0</code> (Prism). The big change is that the graph lives in <strong>plain Postgres instead of Neo4j</strong>. It is stored as typed tables plus a generic <code>edges(tenant_id, src, rel, dst, valid_from, valid_to, provenance)</code> table, with recursive CTEs for 1–4 hop traversals and pgvector next to it. Apache AGE was dropped because it is not offered on Cloud SQL or AlloyDB. The result is one managed database, native row-level security, and low cost. Graph access sits behind a repository interface (<code>neighbors</code>, <code>trace_lot</code>, <code>find_paths</code>), so a Neo4j or Spanner Graph projection can be added later without rewriting agents. See the <a href="tech_deep_dive.html">technical deep-dive §5</a>.</p>
 <p><strong>Ontology (core plus pack extensions)</strong></p>
 <div class="table-wrap"><table>
 <thead>
@@ -992,10 +993,16 @@ td code { font-size: .82em; }
 <td>Strong tool calling (GLM-5.2 scores 99.1 on τ²-bench); open weights allow self-hosting later</td>
 </tr>
 <tr>
+<td>Page parsing (printed scans)</td>
+<td>GPT-6 Luna, <code>reasoning.effort=none</code>, Batch</td>
+<td>Gemini 3.8 Flash (thinking LOW, media_resolution MEDIUM)</td>
+<td>Luna is about 7–14× cheaper per page; Gemini's price doubles on 1 Jan 2027</td>
+</tr>
+<tr>
 <td>Vision re-read, handwriting</td>
-<td>Gemini 3.8 Flash (Batch/Flex)</td>
-<td>GPT-6 Luna vision; ADE DPT-3 Pro for grounded output</td>
-<td>Best price/quality on images</td>
+<td>Gemini 3.8 Flash (thinking LOW) or ADE DPT-3 Pro</td>
+<td>Qwen3-VL-8B self-hosted; Gemini 3.1 Pro for the hardest fields</td>
+<td>Decided per field by measured gold-set accuracy</td>
 </tr>
 <tr>
 <td>Recipe engineer (coding), contract review, tax-pack review</td>
@@ -1083,8 +1090,8 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>Database</td>
-<td><strong>Postgres 17</strong> (Neon/Supabase to start): RLS, pgvector, Apache AGE, pgmq for queues</td>
-<td>One database handles OLTP, vectors, graph and queue</td>
+<td><strong>Postgres 17 on Cloud SQL</strong> (Docker locally): RLS, pgvector (halfvec), pg_textsearch BM25, edge tables for the graph, a queue table</td>
+<td>One managed database handles OLTP, vectors, keyword search, the graph and the queue</td>
 </tr>
 <tr>
 <td>Blob storage</td>
@@ -1098,8 +1105,8 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>OCR serving</td>
-<td>PaddleOCR-VL / GLM-OCR on serverless GPU (Modal/RunPod), scaled to zero; GLM-OCR API as a bridge</td>
-<td>Low SMB volume means we must not pay for an idle GPU</td>
+<td>Locally: GLM-OCR or PaddleOCR-VL via Ollama or MLX. On GCP: Cloud Run <strong>jobs</strong> on an L4 GPU (scale to zero, about $1.05/hr) for nightly batches, and CPU Cloud Run for Tesseract/PP-OCRv5 triage</td>
+<td>Low SMB volume means we must not pay for an idle GPU; use APIs until volume justifies GPUs</td>
 </tr>
 <tr>
 <td>Frontend</td>
@@ -1118,8 +1125,8 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td>Infrastructure</td>
-<td>Fly.io or Cloud Run + Neon, with Terraform</td>
-<td>Low fixed cost</td>
+<td>Local: docker-compose. GCP: Cloud Run (API, workers, jobs) + Cloud SQL + GCS + Secret Manager, with Terraform</td>
+<td>Low fixed cost; one cloud</td>
 </tr>
 </tbody>
 </table></div>
@@ -1138,7 +1145,7 @@ td code { font-size: .82em; }
 </tr>
 <tr>
 <td><code>edm_sementic_layer_v3.0</code></td>
-<td>Governed metric YAML, hybrid retrieval with RRF (reciprocal rank fusion), gateway pattern (MCP, JWT identity, handles not rows, audit, SQL guard), role-gating checked in four places, traces, confirm-and-distill loop with anti-poisoning rules, deterministic evals with canaries. <em>Change:</em> Neo4j becomes AGE + pgvector; add tenant dimension and write actions; move the result store into Redis/Postgres.</td>
+<td>Governed metric YAML, hybrid retrieval with RRF (reciprocal rank fusion), gateway pattern (MCP, JWT identity, handles not rows, audit, SQL guard), role-gating checked in four places, traces, confirm-and-distill loop with anti-poisoning rules, deterministic evals with canaries. <em>Change:</em> Neo4j becomes Postgres edge tables + pgvector (optional Neo4j projection later); add tenant dimension and write actions; move the result store into Redis/Postgres.</td>
 </tr>
 <tr>
 <td><code>langchain-ai/paid-media-agent</code></td>

@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keel Technical Deep-Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky ledger-style contents rail on the left, one reading column on the right; rail collapses into a top "Contents" drawer on phones. */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --ink: #16201c;
+  --muted: #56645e;
+  --line: #dde3df;
+  --accent: #0e6b59;
+  --accent-soft: #e2f0eb;
+  --mark: #f6e7a3;
+  --code-bg: #eef2ef;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rail: 268px;
+  --col: 860px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+    --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+  --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: var(--accent); z-index: 50; transition: width .1s linear;
+}
+
+.shell {
+  display: grid; grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 48px; max-width: calc(var(--rail) + var(--col) + 48px + 64px);
+  margin: 0 auto; padding-inline: 32px; padding-block: 0 96px;
+}
+
+/* ---------- contents rail ---------- */
+.rail {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  align-self: start; max-height: 100vh; overflow-y: auto;
+  padding-block: 40px 24px;
+}
+.rail .brand {
+  font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em;
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
+}
+.rail .brand small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+.rail .tag { color: var(--muted); font-size: 13px; margin: 0 0 24px; line-height: 1.45; }
+.toc-label {
+  font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 8px;
+}
+.toc { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
+.toc a {
+  display: grid; grid-template-columns: 26px 1fr; gap: 4px; align-items: baseline;
+  padding: 5px 10px; margin-left: -1px; border-left: 2px solid transparent;
+  color: var(--muted); text-decoration: none; font-size: 14px; line-height: 1.35;
+}
+.toc a .n { font-family: var(--f-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.toc a:hover { color: var(--ink); }
+.toc a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+.rail .src-note { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* mobile contents drawer */
+.mnav { display: none; }
+
+/* ---------- main column ---------- */
+main { min-width: 0; padding-top: 40px; }
+.hero { padding-bottom: 32px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px;
+}
+.eyebrow span + span::before { content: "·"; margin-right: 14px; color: var(--line); }
+.hero h1 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(40px, 7vw, 68px);
+  line-height: 1; letter-spacing: -0.03em; margin: 16px 0 12px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 46ch; margin: 0; text-wrap: balance; }
+.stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  margin-top: 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden;
+}
+.stat { padding: 14px 16px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .v { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.stats-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+blockquote.lede {
+  margin: 28px 0 0; padding: 18px 22px; background: var(--accent-soft);
+  border-radius: 10px; font-size: 17px; line-height: 1.6;
+}
+blockquote.lede p { margin: 0 0 .6em; } blockquote.lede p:last-child { margin: 0; }
+blockquote.lede strong { color: var(--accent); }
+
+.sec { padding-top: 40px; }
+.sec + .sec { border-top: 1px solid var(--line); margin-top: 40px; }
+h2 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 34px);
+  letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 18px; text-wrap: balance;
+}
+h3 {
+  font-family: var(--f-display); font-weight: 500; font-size: 21px; letter-spacing: -0.01em;
+  margin: 32px 0 10px; text-wrap: balance;
+}
+p, li { max-width: 72ch; overflow-wrap: break-word; }
+ul, ol { padding-left: 1.3em; }
+li { margin: 4px 0; }
+li > ul, li > ol { margin: 4px 0; }
+strong { font-weight: 600; }
+hr { display: none; }
+code {
+  font-family: var(--f-mono); font-size: .86em; background: var(--code-bg);
+  padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere;
+}
+blockquote:not(.lede) {
+  margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--accent); color: var(--ink);
+}
+p strong:only-child { }
+mark, .hl { background: var(--mark); padding: 0 .15em; border-radius: 2px; }
+
+.table-wrap {
+  overflow-x: auto; margin: 16px 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+}
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th {
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); background: var(--code-bg); white-space: nowrap;
+}
+td:first-child { font-weight: 500; min-width: 130px; }
+td { font-variant-numeric: tabular-nums; }
+td code { font-size: .82em; }
+
+.code-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--line); }
+.code-wrap pre { margin: 0; padding: 16px 18px; }
+.code-wrap code { background: none; padding: 0; font-size: 13px; line-height: 1.55; overflow-wrap: normal; white-space: pre; }
+
+.diagram {
+  overflow-x: auto; margin: 18px 0 22px; padding: 16px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface);
+}
+.diagram pre.mermaid { margin: 0; background: none; font-family: var(--f-mono); font-size: 12px; }
+
+#totop {
+  position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-size: 18px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+
+/* ---------- narrow ---------- */
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-inline: 16px; }
+  .rail { display: none; }
+  .mnav {
+    display: block; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
+    margin-inline: -16px; padding-inline: 16px; background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .mnav summary {
+    list-style: none; cursor: pointer; padding-block: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    font-weight: 600; font-size: 15px;
+  }
+  .mnav summary::-webkit-details-marker { display: none; }
+  .mnav summary .cur { color: var(--muted); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .mnav summary::after { content: "▾"; color: var(--muted); }
+  .mnav[open] summary::after { content: "▴"; }
+  .mnav .toc { max-height: 60vh; overflow-y: auto; margin-bottom: 12px; }
+  main { padding-top: 20px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+</style>
+
+</head>
+<body>
+<div id="progress" aria-hidden="true"></div>
+
+<div class="shell">
+  <aside class="rail" aria-label="Contents">
+    <div class="brand">Keel <small>DEEP-DIVE</small></div>
+    <p class="tag">Parsing models, hosting, retrieval, handwriting and graph choices for Keel.</p>
+    <p class="toc-label">Contents</p>
+    <ol class="toc" id="toc">
+<li><a href="#0-recommendations-at-a-glance" data-target="0-recommendations-at-a-glance"><span class="n">0</span><span>Recommendations at a glance</span></a></li>
+<li><a href="#1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna" data-target="1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna"><span class="n">1</span><span>Your Gemini parser</span></a></li>
+<li><a href="#2-running-locally-then-on-gcp" data-target="2-running-locally-then-on-gcp"><span class="n">2</span><span>Running locally, then on GCP</span></a></li>
+<li><a href="#3-gemini-file-search-vs-better-and-cheaper-options" data-target="3-gemini-file-search-vs-better-and-cheaper-options"><span class="n">3</span><span>Gemini File Search vs better and cheaper options</span></a></li>
+<li><a href="#4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models" data-target="4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models"><span class="n">4</span><span>Handwriting</span></a></li>
+<li><a href="#5-neo4j-graphrag-and-neocarta" data-target="5-neo4j-graphrag-and-neocarta"><span class="n">5</span><span>Neo4j, GraphRAG and neocarta</span></a></li>
+<li><a href="#6-revised-document-pipeline-with-these-findings" data-target="6-revised-document-pipeline-with-these-findings"><span class="n">6</span><span>Revised document pipeline (with these findings)</span></a></li>
+<li><a href="#sources" data-target="sources"><span class="n">·</span><span>Sources</span></a></li>
+    </ol>
+    <p class="src-note">Researched 3 Oct 2026. Prices are mostly from aggregators; re-check vendor pages before budgeting.</p>
+  </aside>
+
+  <main>
+    <details class="mnav" id="mnav">
+      <summary><span>Contents</span><span class="cur" id="mcur">Overview</span></summary>
+      <ol class="toc" id="mtoc">
+<li><a href="#0-recommendations-at-a-glance" data-target="0-recommendations-at-a-glance"><span class="n">0</span><span>Recommendations at a glance</span></a></li>
+<li><a href="#1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna" data-target="1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna"><span class="n">1</span><span>Your Gemini parser</span></a></li>
+<li><a href="#2-running-locally-then-on-gcp" data-target="2-running-locally-then-on-gcp"><span class="n">2</span><span>Running locally, then on GCP</span></a></li>
+<li><a href="#3-gemini-file-search-vs-better-and-cheaper-options" data-target="3-gemini-file-search-vs-better-and-cheaper-options"><span class="n">3</span><span>Gemini File Search vs better and cheaper options</span></a></li>
+<li><a href="#4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models" data-target="4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models"><span class="n">4</span><span>Handwriting</span></a></li>
+<li><a href="#5-neo4j-graphrag-and-neocarta" data-target="5-neo4j-graphrag-and-neocarta"><span class="n">5</span><span>Neo4j, GraphRAG and neocarta</span></a></li>
+<li><a href="#6-revised-document-pipeline-with-these-findings" data-target="6-revised-document-pipeline-with-these-findings"><span class="n">6</span><span>Revised document pipeline (with these findings)</span></a></li>
+<li><a href="#sources" data-target="sources"><span class="n">·</span><span>Sources</span></a></li>
+      </ol>
+    </details>
+
+    <header class="hero" id="top">
+      <div class="eyebrow"><span>Technical deep-dive</span><span>Companion to the proposal</span><span>3 Oct 2026</span></div>
+      <h1>Parsing, retrieval <em>&amp;</em> graph</h1>
+      <p class="sub">Gemini 3.8 Flash vs GPT-6 Luna, small models on Cloud Run, replacing the Gemini File Search store, handwriting parsers, and Neo4j with neocarta.</p>
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><div class="v">7–14×</div><div class="k">GPT-6 Luna cheaper per page than Gemini 3.8 Flash</div></div>
+        <div class="stat" role="listitem"><div class="v">$0.37</div><div class="k">Luna batch, per 1,000 scanned pages (Gemini: $2.60, then $5.20 in 2027)</div></div>
+        <div class="stat" role="listitem"><div class="v">10</div><div class="k">File Search stores per project (reported cap)</div></div>
+        <div class="stat" role="listitem"><div class="v">+$0</div><div class="k">Context graph as edge tables on Cloud SQL</div></div>
+      </div>
+      <p class="stats-note">Figures come mostly from third-party sources; see the reliability note below and §1–§5.</p>
+      <blockquote class="lede">
+<p><strong>How reliable these numbers are.</strong> The network proxy blocked most vendor pricing pages (openai.com, ai.google.dev, landing.ai, neo4j.com). Most prices come from search snippets and third-party sites. <strong>[U]</strong> marks a figure we could not confirm on a primary source. The Luna-versus-Gemini comparison depends most on two of them: Luna's image-token multiplier and Gemini's thinking-token count. Check both with a one-page <code>usage</code> call on each API before you commit.</p>
+</blockquote>
+<hr />
+
+    </header>
+
+
+<section class="sec" id="sec-0-recommendations-at-a-glance" aria-labelledby="0-recommendations-at-a-glance"><h2 id="0-recommendations-at-a-glance">0. Recommendations at a glance</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini 3.8 Flash or GPT-6 Luna for parsing?</td>
+<td><strong>Luna is about 7–14× cheaper per page.</strong> Luna batch costs about $0.37 per 1k pages; Gemini batch about $2.60 now and <strong>$5.20 from 1 Jan 2027</strong>. Quality on handwriting is unproven for Luna, so <strong>don't switch blind</strong>: run both on your gold set. Use Luna (<code>reasoning.effort=none</code>, Batch) for printed scans and structured extraction. Keep Gemini 3.8 Flash (thinking LOW) for handwriting until Luna proves itself.</td>
+</tr>
+<tr>
+<td>Your <code>gemini_parse_util.py</code></td>
+<td>Fix 8 things before you change models (§1.3). Thinking is billed by default; there is no per-page splitting, no <code>media_resolution</code>, no structured output and no usage logging. Several of these cut cost more than switching models does.</td>
+</tr>
+<tr>
+<td>Local, then GCP? Small models on Cloud Run?</td>
+<td><strong>Yes.</strong> Locally, use docker-compose with Postgres + pgvector, and Ollama or MLX running GLM-OCR or PaddleOCR-VL (they need about 2–3 GB RAM). On GCP, use Cloud Run for the app, Cloud SQL and GCS. Cloud Run <strong>supports GPUs</strong>: L4 at about $1.05/hr all-in, scaling to zero, and also available for <strong>jobs</strong>. <strong>But at SMB volume, API batch pricing is about as cheap as a fully used L4</strong>, so self-host only for data sovereignty or high steady volume.</td>
+</tr>
+<tr>
+<td>Gemini File Search store?</td>
+<td><strong>Move to Postgres</strong> (pgvector + pg_textsearch BM25 on Cloud SQL, protected by row-level security). File Search is cheap ($0.15 per 1M indexing tokens, free storage). But your <strong>one store per organisation will hit the reported 10-stores-per-project cap</strong> [U]. Tenant isolation would then rest on a metadata filter, the index cannot be exported, and there is no region pinning. For invoices, <strong>extract to SQL first</strong>, and use vectors only for free text.</td>
+</tr>
+<tr>
+<td>ADE Gen2 or LiteParse for handwriting?</td>
+<td><strong>LiteParse: no.</strong> It bundles Tesseract, which cannot read cursive; LlamaIndex itself says to use LlamaParse for handwriting. Use LiteParse only to triage born-digital PDFs. <strong>ADE Gen2 (DPT-3 Pro): plausible, unproven.</strong> It claims handwriting support, gives grounding and zero data retention, and costs about 2–3¢ per page (about half on the async tier). There is no independent handwriting benchmark, so test it on 50–100 of your own pages.</td>
+</tr>
+<tr>
+<td>Neo4j + neocarta for the semantic layer?</td>
+<td><strong>Not now.</strong> neocarta is a <em>metadata catalog for text-to-SQL</em>, not a store for tenant data. It is experimental (v0.8.1, Labs) and has no tenancy. Also, <strong>Apache AGE is not available on Cloud SQL</strong>, so the proposal now uses Postgres edge tables with recursive CTEs. Keep the metrics YAML <strong>OSI-compatible</strong> (Open Semantic Interchange, the format neocarta reads) and hide graph access behind an interface. Add Neo4j later as a projection if graph-native needs appear (§5.5).</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna" aria-labelledby="1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna"><h2 id="1-your-gemini-parser-gemini-38-flash-vs-gpt-6-luna">1. Your Gemini parser: Gemini 3.8 Flash vs GPT-6 Luna</h2>
+<h3 id="11-prices-usd-per-1m-tokens">1.1 Prices (USD per 1M tokens)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Gemini 3.8 Flash (intro, to 31 Dec 2026)</th>
+<th>Gemini 3.8 Flash (from 1 Jan 2027)</th>
+<th>GPT-6 Luna</th>
+<th>GPT-6 Luna Batch/Flex</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input</td>
+<td>$0.75</td>
+<td>$1.50</td>
+<td>$0.10</td>
+<td>$0.05</td>
+</tr>
+<tr>
+<td>Cached input</td>
+<td>$0.075</td>
+<td>$0.15</td>
+<td>$0.01</td>
+<td>$0.005</td>
+</tr>
+<tr>
+<td>Output (includes thinking/reasoning tokens)</td>
+<td>$3.75</td>
+<td>$7.50</td>
+<td>$0.50</td>
+<td>$0.25</td>
+</tr>
+<tr>
+<td>Batch</td>
+<td>50% off</td>
+<td>50% off</td>
+<td>–</td>
+<td>50% off</td>
+</tr>
+</tbody>
+</table></div>
+<p>The January doubling of Gemini 3.8 Flash's price is confirmed by several independent sources. Luna's price was itself a cut, down from $0.20/$1.20.</p>
+<h3 id="12-how-a-page-becomes-tokens-and-cost-per-page">1.2 How a page becomes tokens, and cost per page</h3>
+<p><strong>Gemini 3.x</strong></p>
+<ul>
+<li>Images and PDF pages are billed at a fixed <code>media_resolution</code>: LOW = 280, MEDIUM = 560 and HIGH = 1,120 tokens per page.</li>
+<li>Google says PDF quality "saturates at MEDIUM".</li>
+<li><strong>Thinking cannot be turned off on 3.8 Flash.</strong> MINIMAL returns an error; LOW is the floor, and the default is MEDIUM. Thinking tokens are billed as output.</li>
+<li>An independent OCR benchmark found that <strong>HIGH thinking made OCR worse</strong>: character error rate 0.406 at HIGH against 0.298 at LOW.</li>
+</ul>
+<p><strong>GPT-6 Luna</strong></p>
+<ul>
+<li>Images are billed in 32-px patches multiplied by a model factor. For a scanned A4 page this is about 3,000 tokens at high detail [U]. PDF input is billed as text plus an image of each page; whether Luna accepts PDFs directly is unconfirmed [U].</li>
+<li><strong><code>reasoning.effort=none</code> turns reasoning off completely.</strong></li>
+</ul>
+<p><strong>Cost per scanned A4 page</strong>, with about 800 tokens of Markdown or JSON output. Gemini at LOW thinking adds about 300 thinking tokens.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Per page</th>
+<th>Standard</th>
+<th>Batch</th>
+<th>Per 1,000 pages (batch)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini 3.8 Flash, intro price</td>
+<td>$0.0046–0.0052</td>
+<td>$0.0023–0.0026</td>
+<td><strong>≈ $2.60</strong></td>
+</tr>
+<tr>
+<td>Gemini 3.8 Flash, 2027 price</td>
+<td>$0.0091–0.0104</td>
+<td>$0.0046–0.0052</td>
+<td><strong>≈ $5.20</strong></td>
+</tr>
+<tr>
+<td>GPT-6 Luna, effort <code>none</code></td>
+<td>$0.0005–0.0007</td>
+<td>$0.0002–0.0004</td>
+<td><strong>≈ $0.37</strong></td>
+</tr>
+<tr>
+<td>GPT-6 Luna, effort <code>low</code></td>
+<td>$0.0006–0.0009</td>
+<td>$0.0003–0.00045</td>
+<td>≈ $0.45</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Output tokens make up 80–90% of the cost on both models.</strong> The cheapest lever is to output less: emit a schema-bound JSON object instead of full Markdown wherever you only need fields.</p>
+<p><strong>Quality evidence (thin)</strong></p>
+<ul>
+<li>Gemini 3 Flash ranks #2 on OCR Arena (Elo 1784). On socOCRbench, Gemini 3 Flash scored only 0.52–0.64 on handwriting sets.</li>
+<li>There are no public OCR benchmarks for GPT-6 Luna. Its predecessor beat Gemini 3.6 Flash on one OCR test (90.7% vs 88.2%).</li>
+<li><strong>An image-encoding bug degraded GPT-6 vision until 25 Sep 2026.</strong> Ignore any Luna evaluation run before that date.</li>
+<li>Artificial Analysis Intelligence Index: Gemini 3.8 Flash 41, Luna 33.</li>
+</ul>
+<p><strong>Verdict.</strong> Use Luna for printed scans and extraction to a schema. Keep Gemini for handwriting until your gold-set evaluation says otherwise. Behind the router, this is a configuration change, not a rewrite.</p>
+<h3 id="13-review-of-srcraggemini_parse_utilpy">1.3 Review of <code>src/rag/gemini_parse_util.py</code></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue in the current code</th>
+<th>Impact</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>No <code>thinking_config</code>. Gemini 3.8 Flash defaults to <strong>MEDIUM</strong> thinking, billed as output. Your <code>gemini_file_store.py</code> already sets <code>GEMINI_THINKING_LEVEL=LOW</code>, but the parser doesn't.</td>
+<td>Pays for extra output tokens and slightly <em>worse</em> OCR</td>
+<td>Set <code>thinking_level=LOW</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>No <code>media_resolution</code></td>
+<td>Pays HIGH-resolution token counts where MEDIUM is enough, or the reverse on handwriting</td>
+<td>MEDIUM for PDFs; HIGH only for handwriting or photos, set per part</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The <strong>whole multi-page document goes in one call</strong></td>
+<td>Long PDFs hit the output-token limit and get truncated silently. There are no per-page retries, no per-page caching and no per-page routing to cheaper tiers.</td>
+<td>Split into pages, run in parallel with a semaphore, cache by page hash, and route each page separately (text layer, then OCR, then VLM)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Free-form Markdown output only</td>
+<td>No fields, confidence or page references, so nothing to validate. More output tokens too.</td>
+<td>Two modes: <code>response_schema</code> JSON for extraction (per-field page and quote), and Markdown only for RAG text</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>temperature=0.1</code></td>
+<td>Google's Gemini 3 guidance is to keep the default of 1.0; lower values can cause looping or worse output [U]</td>
+<td>Remove it and control output with the schema instead</td>
+</tr>
+<tr>
+<td>6</td>
+<td>No usage logging</td>
+<td>You can't see cost per page or per tenant</td>
+<td>Log <code>usage_metadata</code> per call (prompt, candidates, <code>thoughts_token_count</code>), with tenant and document IDs</td>
+</tr>
+<tr>
+<td>7</td>
+<td>No Batch API</td>
+<td>Pays double for inbox work that isn't urgent</td>
+<td>Use the Batch API (50% off) for the nightly or async inbox</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Upload, then delete, through the Files API on every call; sync wrapper uses <code>nest_asyncio</code></td>
+<td>Extra round-trips; fragile in event loops</td>
+<td>Send inline bytes for files under about 20 MB; use the native <code>client.aio</code> async API</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two smaller points:</p>
+<ul>
+<li>The docstrings still say gemini-2.0-flash and 2.5-pro.</li>
+<li>The "high" path uses <code>gemini-3-pro-preview</code>, which is expensive. Escalate per <em>field</em> (ADE, or Gemini 3.1 Pro on a cropped region) rather than re-parsing whole documents.</li>
+</ul>
+<p><strong>A target interface for Keel</strong></p>
+<div class="code-wrap"><pre><code class="language-python">parse_page(page: PageImage, mode: Literal[&quot;markdown&quot;,&quot;extract&quot;], schema: type[BaseModel] | None,
+           tier: Literal[&quot;auto&quot;,&quot;t1&quot;,&quot;t2&quot;,&quot;t3&quot;,&quot;t4&quot;]) -&gt; PageResult  # fields, bbox?, confidence, usage, provider
+</code></pre></div>
+<p>Providers sit behind one interface: Gemini, OpenAI Luna, ADE, local GLM-OCR/PaddleOCR-VL, and LiteParse. Routing and escalation follow PROPOSAL §4.4.</p>
+<hr />
+</section>
+<section class="sec" id="sec-2-running-locally-then-on-gcp" aria-labelledby="2-running-locally-then-on-gcp"><h2 id="2-running-locally-then-on-gcp">2. Running locally, then on GCP</h2>
+<h3 id="21-local-development-stack">2.1 Local development stack</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Local</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres 17 + pgvector (+ pg_textsearch if the image has it, else <code>tsvector</code>)</td>
+<td><code>docker-compose</code></td>
+</tr>
+<tr>
+<td>API and agents (FastAPI, deepagents, LangGraph)</td>
+<td><code>uv run</code> / container</td>
+</tr>
+<tr>
+<td>Next.js</td>
+<td><code>pnpm dev</code></td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td>MinIO, or the local filesystem behind a <code>Storage</code> interface (you already have <code>src.storage</code>)</td>
+</tr>
+<tr>
+<td>OCR models</td>
+<td><strong>GLM-OCR 0.9B on Ollama</strong> (about 2.2 GB download, 2.5 GB RAM, runs on any Mac with 8 GB or more). <strong>PaddleOCR-VL on MLX</strong>: about 1.3 s per page on an M4 Max, 1.7 GB peak. olmOCR-2 7B needs about 17 GB VRAM at FP16, or 5 GB or more quantized.</td>
+</tr>
+<tr>
+<td>Sandbox</td>
+<td>Docker (from recon v2)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="22-production-on-gcp">2.2 Production on GCP</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>GCP service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API, web, workers</td>
+<td><strong>Cloud Run</strong> services</td>
+</tr>
+<tr>
+<td>Batch OCR and nightly runs</td>
+<td><strong>Cloud Run jobs</strong> (no idle cost)</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><strong>Cloud SQL for PostgreSQL</strong> (pgvector 0.8.x; pg_textsearch BM25 has been in public preview since 21 Sep 2026). Move to AlloyDB only at scale.</td>
+</tr>
+<tr>
+<td>Blobs</td>
+<td>GCS (per-tenant prefixes, CMEK if needed)</td>
+</tr>
+<tr>
+<td>Secrets</td>
+<td>Secret Manager</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Postgres table / pgmq-style, or Cloud Tasks</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="23-can-small-models-run-on-cloud-run-yes-with-gpus">2.3 Can small models run on Cloud Run? Yes, with GPUs</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>NVIDIA L4</th>
+<th>RTX PRO 6000 (GA Apr 2026)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VRAM</td>
+<td>24 GB</td>
+<td>96 GB</td>
+</tr>
+<tr>
+<td>Minimum CPU / RAM</td>
+<td>4 vCPU / 16 GiB</td>
+<td>20 vCPU / 80 GiB</td>
+</tr>
+<tr>
+<td>All-in price at the minimum shape</td>
+<td><strong>≈ $1.05/hr</strong></td>
+<td>≈ $3.2/hr</td>
+</tr>
+<tr>
+<td>Scale to zero</td>
+<td>Yes (instance-based billing while it is up)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Cold start</td>
+<td>Small models about 10–20 s; large vLLM weights take minutes</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Works for</td>
+<td>Services, <strong>jobs</strong> and worker pools</td>
+<td>Same</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Throughput and break-even</strong></p>
+<ul>
+<li>GLM-OCR does about 1.9 pages/s on vLLM (A100 class). Expect roughly <strong>0.5–1 page/s on an L4</strong> [U].</li>
+<li>That works out to <strong>$0.0003–0.0006 per page only while the GPU is kept busy</strong>.</li>
+<li>GPT-6 Luna batch costs about $0.0003–0.0004 per page with no operations work.</li>
+<li><strong>So at SMB volumes the API wins.</strong> Self-host only when one of these is true:<ol>
+<li>a customer requires data residency or sovereignty;</li>
+<li>you have a steady load of thousands of pages per hour;</li>
+<li>you need a model the APIs don't offer, such as Qwen3-VL-8B for handwriting.</li>
+</ol>
+</li>
+</ul>
+<p><strong>CPU-only Cloud Run</strong></p>
+<ul>
+<li>Tesseract runs at about 0.5 s per page and PP-OCRv5 mobile at about 1.75 s per image. That is about $0.00004 per page.</li>
+<li>This is fine for triage and printed text, but weak on handwriting and gives no structure.</li>
+<li>PaddleOCR-VL has no official CPU support.</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-3-gemini-file-search-vs-better-and-cheaper-options" aria-labelledby="3-gemini-file-search-vs-better-and-cheaper-options"><h2 id="3-gemini-file-search-vs-better-and-cheaper-options">3. Gemini File Search vs better and cheaper options</h2>
+<h3 id="31-what-file-search-really-costs-and-limits">3.1 What File Search really costs and limits</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Indexing</td>
+<td>$0.15 per 1M tokens, once</td>
+</tr>
+<tr>
+<td>Storage and query embeddings</td>
+<td>Free</td>
+</tr>
+<tr>
+<td>Retrieved chunks</td>
+<td>Billed as input tokens on every query (about 2–5k)</td>
+</tr>
+<tr>
+<td>Stores per project</td>
+<td><strong>10</strong> [U, stated in several tutorials]</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>Up to 1 TB on Tier 3; keep each store under 20 GB</td>
+</tr>
+<tr>
+<td>Metadata filtering</td>
+<td>Yes (AIP-160 filter syntax), which your code uses</td>
+</tr>
+<tr>
+<td>Citations</td>
+<td>Yes. A reported bug drops citations on Gemini 3 when File Search is combined with function tools (pydantic-ai issue #6207).</td>
+</tr>
+<tr>
+<td>Residency</td>
+<td>No region pinning on the Developer API</td>
+</tr>
+<tr>
+<td>Lock-in</td>
+<td>High: chunks and embeddings cannot be exported</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Impact on your <code>gemini_file_store.py</code></strong></p>
+<ul>
+<li>Its design is "one store per organisation" (<code>&lt;org&gt;_file_search_store</code>). With a 10-store cap, that <strong>stops working at the 10th tenant</strong>.</li>
+<li>The fallback is one shared store filtered by <code>organization_id</code> metadata. Then isolation depends on every query remembering the filter, which is exactly what the proposal's row-level security avoids.</li>
+</ul>
+<h3 id="32-recommended-replacement-all-on-cloud-sql">3.2 Recommended replacement (all on Cloud SQL)</h3>
+<div class="code-wrap"><pre><code>documents / pages / fields (structured extraction)  ← primary path for invoices: SQL + exact match
+chunks(tenant_id, doc_id, page, text, tsv, embedding halfvec(768))  ← free text (contracts, notes, SOPs)
+  + RLS on tenant_id
+  + pgvector HNSW (halfvec; binary_quantize + re-rank at scale; iterative scans for filtered queries)
+  + pg_textsearch BM25 (or tsvector) → hybrid via RRF
+</code></pre></div>
+<p><strong>Embeddings</strong></p>
+<ul>
+<li><strong>gemini-embedding-001</strong>, batch: $0.075 per 1M tokens, truncated to 768 dimensions.</li>
+<li><strong>EmbeddingGemma-300M</strong> or <strong>Qwen3-Embedding-0.6B</strong> self-hosted on CPU: free, and keeps data in-house.</li>
+</ul>
+<p><strong>Why this beats File Search</strong></p>
+<ul>
+<li>Tenant isolation is enforced by the database.</li>
+<li>One database serves the ledger, the graph and retrieval.</li>
+<li>Exact identifiers (invoice numbers, SKUs, lot numbers) are found by BM25 and SQL, whereas embeddings handle them badly.</li>
+<li>No lock-in, and you control the region.</li>
+</ul>
+<p><strong>Cost model: 100 tenants × 5,000 pages</strong> (500k pages, about 300M tokens, about 750k chunks)</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Gemini File Search</th>
+<th>Postgres + gemini-embedding (batch)</th>
+<th>Postgres + EmbeddingGemma on CPU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One-off indexing</td>
+<td>$45</td>
+<td>$22.50</td>
+<td>≈ $5–15 of VM time</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>Free (2–3 GB of quota)</td>
+<td>≈ 3 GB inside the existing database</td>
+<td>≈ 2 GB</td>
+</tr>
+<tr>
+<td>Per query</td>
+<td>Retrieved tokens + generation</td>
+<td>≈ $0.000002 + generation</td>
+<td>≈ $0 + generation</td>
+</tr>
+<tr>
+<td>Re-chunking</td>
+<td>Pay again</td>
+<td>Re-embed</td>
+<td>Free</td>
+</tr>
+</tbody>
+</table></div>
+<p>Indexing cost is trivial on every option. The deciding factors are isolation, lock-in, residency and the number of context tokens per query.</p>
+<p><strong>Retrieval without vectors (agentic search).</strong> For long structured documents (contracts, manuals, SOPs), an agent that reads a table of contents, uses grep or a PageIndex-style tree, or opens pages directly often beats vector RAG. This is how coding agents search, and it fits the deepagents filesystem. For invoices, use SQL. Use vectors as a fallback for free text.</p>
+<hr />
+</section>
+<section class="sec" id="sec-4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models" aria-labelledby="4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models"><h2 id="4-handwriting-landingai-ade-gen2-vs-liteparse-vs-open-models">4. Handwriting: LandingAI ADE Gen2 vs LiteParse vs open models</h2>
+<h3 id="41-liteparse-llamaindex-no-handwriting">4.1 LiteParse (LlamaIndex): no handwriting</h3>
+<ul>
+<li>LiteParse extracts the text layer with PDFium at about 2–5 ms per page, and runs OCR <strong>only</strong> on pages that have no text layer.</li>
+<li>It bundles <strong>Tesseract</strong>, which <strong>cannot read cursive</strong>. You can plug in a PaddleOCR or EasyOCR server, which is only partly better.</li>
+<li>LlamaIndex's own documentation says that for handwriting or scans you will get "significantly better results with <strong>LlamaParse</strong>":<ul>
+<li>Agentic tier: 10 credits ≈ $0.0125 per page</li>
+<li>Agentic Plus: ≈ $0.056 per page</li>
+</ul>
+</li>
+<li>LiteParse "v2" is a speed rewrite with no handwriting model.</li>
+<li><strong>Use it for tier 0 only:</strong> a free text layer for born-digital PDFs.</li>
+</ul>
+<h3 id="42-landingai-ade-gen2-launched-about-9-sep-2026">4.2 LandingAI ADE Gen2 (launched about 9 Sep 2026)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>DPT-3 Pro (default)</th>
+<th>DPT-3 Verity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>For</td>
+<td>Scans, <strong>handwriting</strong>, non-Latin scripts, math</td>
+<td>Born-digital PDFs; deterministic</td>
+</tr>
+<tr>
+<td>Grounding</td>
+<td>Line-level boxes</td>
+<td>Word-level boxes with <strong>confidence per word</strong></td>
+</tr>
+<tr>
+<td>Price (priority tier)</td>
+<td>1 credit per page + 0.5 per 1k output characters ≈ <strong>$0.02–0.03 per page</strong></td>
+<td>0.3 credits per page + 0.2 per 1k characters</td>
+</tr>
+<tr>
+<td>Standard (async) tier</td>
+<td><strong>0.5×</strong> the priority price</td>
+<td>Under $0.01 per page</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>APIs:</strong> Parse, <strong>Extract</strong> (JSON schema with grounding), Split, Classify, Section. Python SDK: <code>landingai-ade</code>.</li>
+<li><strong>Enterprise:</strong> zero data retention; VPC container on AWS, Azure or <strong>GCP</strong>; on-prem.</li>
+<li><strong>Evidence:</strong> the published DocVQA score is 99.16%, but that was on DPT-2 and printed text. <strong>No independent handwriting benchmark exists for DPT-3.</strong></li>
+<li><strong>Use it</strong> as the tier-4 escalation for critical handwritten fields, <em>if</em> it passes your gold set.</li>
+<li>Its grounding is the strongest feature: it provides the pixel-level evidence the proposal is built on, which Gemini and Luna don't reliably give.</li>
+</ul>
+<h3 id="43-open-source-handwriting-models-for-self-hosting-or-sovereignty">4.3 Open-source handwriting models (for self-hosting or sovereignty)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Size</th>
+<th>Handwriting evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Qwen3-VL-8B</strong></td>
+<td>8B, Apache-2.0</td>
+<td><strong>Best open model</strong> on OmniHandwritingOCR (F1 81.6) and WildHandBench (62.2%)</td>
+</tr>
+<tr>
+<td>Chandra OCR 2</td>
+<td>4B</td>
+<td>Top downloadable model on olmOCR-bench (≈ 85.9); marketed for handwriting and forms; licence has revenue limits [U]</td>
+</tr>
+<tr>
+<td>Nanonets-OCR2-3B</td>
+<td>3B</td>
+<td>Best specialised model on OmniHandwritingOCR multi-line</td>
+</tr>
+<tr>
+<td>PaddleOCR-VL-1.6</td>
+<td>0.9B</td>
+<td>#1 on OmniDocBench (96.3) for <strong>printed</strong> documents, but only 54% on WildHandBench</td>
+</tr>
+<tr>
+<td>GLM-OCR</td>
+<td>0.9B</td>
+<td>95.2 on OmniDocBench; no handwriting data</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>WildHandBench reality check</strong></p>
+<ul>
+<li>The best system is <strong>Gemini 3.1 Pro at 71.9%, below the human baseline of 77.1%</strong>.</li>
+<li><strong>63–91% of model errors are "prior-driven"</strong>: the model writes plausible text instead of what is actually written. For invoice amounts this is dangerous.</li>
+<li>So the proposal's rule stands: <strong>no handwritten amount posts without a match from a second source or a human tap.</strong></li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-5-neo4j-graphrag-and-neocarta" aria-labelledby="5-neo4j-graphrag-and-neocarta"><h2 id="5-neo4j-graphrag-and-neocarta">5. Neo4j, GraphRAG and neocarta</h2>
+<h3 id="51-what-neocarta-is">5.1 What neocarta is</h3>
+<ul>
+<li>"An end-to-end library for building a <strong>semantic layer in Neo4j</strong>." It extracts <strong>metadata</strong> from data sources into a graph:<ul>
+<li><code>Database → Schema → Table → Column → Value</code></li>
+<li>foreign keys</li>
+<li>business glossary</li>
+<li>query logs</li>
+<li><strong>OSI metrics</strong></li>
+</ul>
+</li>
+<li>It serves that graph to agents through an <strong>MCP server</strong>. Tools include <code>list_schemas</code>, hybrid table and column search, <code>list_metrics_by_domain</code> and <code>get_metric_expression</code>.</li>
+<li>Purpose: <strong>text-to-SQL and data discovery.</strong> "Your data stays in the source."</li>
+<li>Connectors: BigQuery, Dataplex, Snowflake, Databricks, JDBC, CSV and query logs. <strong>OSI YAML import and export.</strong></li>
+<li>Maturity:<ul>
+<li>v0.8.1, "Experimental", Neo4j Labs (not a Neo4j product)</li>
+<li>about 142 stars, Apache-2.0</li>
+<li>a 1.0 refactor is in progress</li>
+</ul>
+</li>
+<li><strong>No tenant concept.</strong> Hard dependencies on BigQuery and Dataplex.</li>
+</ul>
+<p><strong>Fit with Keel</strong></p>
+<ul>
+<li>neocarta could hold the <strong>platform-wide semantic catalog</strong> (metric definitions and table descriptions) so agents can discover metrics.</li>
+<li>It does <strong>not</strong> hold the tenant context graph (vendor, invoice, PO, lot, staff, certification) or agent trace memory.</li>
+<li>The catalog is one shared, non-tenant model, which is small. A few Postgres tables plus pgvector hold it equally well.</li>
+</ul>
+<h3 id="52-why-the-proposal-had-to-change-age-is-not-on-cloud-sql">5.2 Why the proposal had to change: AGE is not on Cloud SQL</h3>
+<p><strong>Apache AGE is not offered on Cloud SQL, AlloyDB, RDS/Aurora or Supabase.</strong> It is available on Azure Postgres and EDB. On GCP, using AGE means running Postgres yourself, which removes the "one managed database" benefit.</p>
+<p><strong>New design</strong></p>
+<ul>
+<li>Typed tables plus a generic <code>edges(tenant_id, src_type, src_id, rel, dst_type, dst_id, valid_from, valid_to, provenance)</code> table.</li>
+<li>Recursive CTEs for 1–4 hop traversals, for example lot → supplier → invoice → certificate.</li>
+<li>Row-level security on every table, and pgvector alongside.</li>
+<li>At SMB scale (thousands to low millions of edges per tenant) this is fast enough.</li>
+</ul>
+<h3 id="53-neo4j-options-and-monthly-cost-u">5.3 Neo4j options and monthly cost [U]</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Cost</th>
+<th>Tenant isolation</th>
+<th>Ops</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud SQL edge tables (already needed)</td>
+<td><strong>+$0</strong></td>
+<td>RLS (strong)</td>
+<td>Lowest</td>
+</tr>
+<tr>
+<td>Aura Professional, shared graph, 4–8 GB</td>
+<td>≈ $260–520</td>
+<td><code>tenantId</code> checks in application code only</td>
+<td>Low, but two databases to keep in sync</td>
+</tr>
+<tr>
+<td>Aura Business Critical (multiple databases, RBAC), 8 GB</td>
+<td>≈ $1,170+</td>
+<td>Database per tenant</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Aura instance per tenant</td>
+<td>≥ $65 × N</td>
+<td>Strong</td>
+<td>Poor</td>
+</tr>
+<tr>
+<td>Neo4j Community on a Compute Engine VM</td>
+<td>≈ $50–120</td>
+<td>Application-level only; <strong>one database, no RBAC</strong>, GPLv3</td>
+<td>Medium-high</td>
+</tr>
+<tr>
+<td>Neo4j Enterprise via the <strong>Startup Program</strong> (free licence if under 50 staff and under $3M revenue) on GKE</td>
+<td>≈ $300–600 of infrastructure</td>
+<td>Database per tenant</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Spanner Graph (GCP)</td>
+<td>≈ $30–900</td>
+<td>Key scoping</td>
+<td>Low-medium</td>
+</tr>
+<tr>
+<td>FalkorDB Cloud (graph per tenant natively; SSPL licence)</td>
+<td>≈ $73–350</td>
+<td>Native</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Note.</strong> Neo4j's full-text and vector index results <strong>bypass per-entry security</strong>, so tenant filters must always be applied. Giving agents a raw Cypher MCP tool (<code>mcp-neo4j-cypher</code>) in a multi-tenant system is risky.</p>
+<h3 id="54-graphrag-frameworks-build-the-graph-deterministically">5.4 GraphRAG frameworks: build the graph deterministically</h3>
+<ul>
+<li>Microsoft GraphRAG and LightRAG build the graph with an LLM. Indexing about 500 pages costs about $50–200 at older GPT-4 prices; LightRAG is about 100× cheaper [U].</li>
+<li><code>neo4j-graphrag</code>'s <code>SimpleKGPipeline</code> also extracts with an LLM.</li>
+<li><strong>Keel already extracts schema-validated fields.</strong> Building the graph is therefore deterministic <code>INSERT</code>/<code>MERGE</code> from validated extraction. It is cheaper, auditable and repeatable.</li>
+<li>Use LLM graph extraction only for free text such as contract obligations, and even there extract into a fixed schema.</li>
+<li><strong>Graphiti (Zep)</strong>, a temporal agent-memory graph, is attractive. But it needs Neo4j or FalkorDB (no Postgres backend) and calls the LLM on every episode. Revisit it if trace memory outgrows the Postgres trace tables.</li>
+</ul>
+<h3 id="55-when-neo4j-becomes-worth-it">5.5 When Neo4j becomes worth it</h3>
+<p>Adopt Neo4j as a <strong>projection</strong> only when one of these appears:</p>
+<ol>
+<li>5+ hop or variable-length traversals, such as multi-tier lot genealogy or fraud rings across vendors;</li>
+<li>graph algorithms such as centrality or community detection;</li>
+<li>you want Graphiti temporal memory;</li>
+<li>analysts or agents really benefit from text-to-Cypher;</li>
+<li>a customer asks for it.</li>
+</ol>
+<p>Postgres stays the source of truth, and change data capture (CDC) feeds the projection. Use Aura Professional through GCP Marketplace, or the Startup-licence Enterprise edition for a database per tenant. Your <code>edm_sementic_layer_v3.0</code> Neo4j skills carry straight over.</p>
+<h3 id="56-can-we-run-neo4j-in-docker-and-deploy-it-to-cloud-run">5.6 Can we run Neo4j in Docker and deploy it to Cloud Run?</h3>
+<p><strong>Locally:</strong> yes. <code>docker run neo4j:5</code> in docker-compose is the right way to develop and test the Neo4j path.</p>
+<p><strong>On Cloud Run, the container starts, but it is the wrong place for a database.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Why it matters on Cloud Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Storage is temporary</strong></td>
+<td>The container's writable filesystem lives in memory. It is lost whenever an instance is replaced (redeploy, scale to zero, maintenance), so the graph disappears unless you mount a volume.</td>
+</tr>
+<tr>
+<td><strong>Mountable volumes don't suit databases</strong></td>
+<td>Cloud Storage FUSE has no proper file locking and slow random writes, which risks store corruption. NFS (Filestore) works technically, but Neo4j advises against network filesystems, and Filestore Basic starts at 1 TiB (about $160–200 a month) [U].</td>
+</tr>
+<tr>
+<td><strong>Only one instance is safe</strong></td>
+<td>Two instances would each hold their own copy of the graph. You must set <code>max-instances=1</code>, so there is no HA and no scaling.</td>
+</tr>
+<tr>
+<td><strong>The driver can't connect through Cloud Run ingress</strong></td>
+<td>Cloud Run ingress accepts HTTP/1, HTTP/2, gRPC and WebSockets on one port. The Python driver speaks <strong>Bolt over raw TCP (7687)</strong>, so it cannot reach the database through Cloud Run's front door. You would be limited to Neo4j's HTTP Query API and would lose the driver's features.</td>
+</tr>
+<tr>
+<td><strong>It is always on and slow to start</strong></td>
+<td>Scale-to-zero means JVM cold starts and page-cache warm-up on the first query. To avoid that you set <code>min-instances=1</code> with always-allocated CPU, which costs about $60–100 a month for 2 vCPU / 8 GiB [U]. That is more than a VM that does the job properly.</td>
+</tr>
+<tr>
+<td><strong>No backups</strong></td>
+<td>You would have to write your own dump-to-GCS job. Community Edition has no online backup [U].</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The same container works fine on GCP this way:</strong></p>
+<ul>
+<li><strong>Compute Engine VM</strong> (Container-Optimized OS) running the same <code>neo4j:5</code> image, with a <strong>persistent disk</strong> and scheduled snapshots.<ul>
+<li>Sizing: e2-medium, about $25 a month, for dev or small use; e2-standard-2, about $50 a month, for production.</li>
+<li>Cloud Run services connect over Bolt to the VM's <strong>private IP</strong> using Direct VPC egress. Nothing is exposed publicly.</li>
+</ul>
+</li>
+<li><strong>GKE Autopilot</strong> with a StatefulSet and a persistent volume, using Neo4j's Helm chart. Choose this if you are already on GKE.</li>
+<li><strong>Aura Professional through GCP Marketplace</strong>, if you would rather pay about $65 per GB-month than run it yourself.</li>
+</ul>
+<p><strong>Recommendation.</strong></p>
+<ul>
+<li>Docker locally for experiments.</li>
+<li>If we adopt the Neo4j projection (§5.5), run it on a small Compute Engine VM next to Cloud SQL, not on Cloud Run.</li>
+<li>Postgres stays the system of record. Neo4j holds a projection that can be rebuilt from Postgres at any time, which lowers the backup risk.</li>
+</ul>
+<p><strong>Do now</strong></p>
+<ol>
+<li>Keep the governed-metrics YAML <strong>OSI-compatible</strong>, so neocarta or other OSI tools can consume it later at no cost.</li>
+<li>Put graph access behind a repository interface (<code>neighbors</code>, <code>trace_lot</code>, <code>find_paths</code>).</li>
+<li>Swapping the backend later then doesn't touch agents or skills.</li>
+</ol>
+<hr />
+</section>
+<section class="sec" id="sec-6-revised-document-pipeline-with-these-findings" aria-labelledby="6-revised-document-pipeline-with-these-findings"><h2 id="6-revised-document-pipeline-with-these-findings">6. Revised document pipeline (with these findings)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Engine</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>LiteParse / PDFium</td>
+<td>Born-digital only; free</td>
+</tr>
+<tr>
+<td>1</td>
+<td>GLM-OCR or PaddleOCR-VL (Ollama locally; Cloud Run GPU job or GLM-OCR API in the cloud)</td>
+<td>Printed scans; boxes</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>GPT-6 Luna</strong> (<code>effort=none</code>, Batch, JSON schema)</td>
+<td>Cheapest structured extraction</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Gemini 3.8 Flash</strong> (thinking LOW, <code>media_resolution</code> per part)</td>
+<td>Handwriting and low-confidence re-reads</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>ADE DPT-3 Pro</strong> (standard tier) or Gemini 3.1 Pro on cropped fields</td>
+<td>Grounded evidence for critical fields</td>
+</tr>
+<tr>
+<td>H</td>
+<td>Human review</td>
+<td>Mandatory for handwritten amounts without a second-source match</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Gold-set evaluation, first task.</strong> Score Luna, Gemini 3.8 Flash, ADE DPT-3 Pro, GLM-OCR and Qwen3-VL-8B on 100+ labelled pages, including your handwritten order pads and QC/HACCP sheets. Measure field-level accuracy, cost per page and latency. Let that result set the router thresholds.</p>
+<hr />
+</section>
+<section class="sec" id="sec-sources" aria-labelledby="sources"><h2 id="sources">Sources</h2>
+<p><strong>Models and pricing</strong></p>
+<ul>
+<li><a href="https://openrouter.ai/openai/gpt-6-luna" target="_blank" rel="noopener">https://openrouter.ai/openai/gpt-6-luna</a></li>
+<li><a href="https://www.digitalapplied.com/blog/gemini-3-8-flash-costs-the-same-until-it-doubles-in-january" target="_blank" rel="noopener">https://www.digitalapplied.com/blog/gemini-3-8-flash-costs-the-same-until-it-doubles-in-january</a></li>
+<li><a href="https://tokencost.app/blog/gemini-3-8-flash-introductory-price-expiry" target="_blank" rel="noopener">https://tokencost.app/blog/gemini-3-8-flash-introductory-price-expiry</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/media-resolution" target="_blank" rel="noopener">https://ai.google.dev/gemini-api/docs/media-resolution</a></li>
+<li><a href="https://github.com/luseloso/gemini-thinking-ocr-benchmark" target="_blank" rel="noopener">https://github.com/luseloso/gemini-thinking-ocr-benchmark</a></li>
+<li><a href="https://mixed-news.com/en/image-encoding-bug-degraded-gpt-6-sol-luna-rerun-evaluations/" target="_blank" rel="noopener">https://mixed-news.com/en/image-encoding-bug-degraded-gpt-6-sol-luna-rerun-evaluations/</a></li>
+<li><a href="https://artificialanalysis.ai/models/comparisons/gpt-6-luna-high-vs-gemini-3-8-flash" target="_blank" rel="noopener">https://artificialanalysis.ai/models/comparisons/gpt-6-luna-high-vs-gemini-3-8-flash</a></li>
+</ul>
+<p><strong>Cloud Run</strong></p>
+<ul>
+<li><a href="https://docs.cloud.google.com/run/docs/configuring/services/gpu" target="_blank" rel="noopener">https://docs.cloud.google.com/run/docs/configuring/services/gpu</a></li>
+<li><a href="https://docs.cloud.google.com/run/docs/configuring/jobs/gpu" target="_blank" rel="noopener">https://docs.cloud.google.com/run/docs/configuring/jobs/gpu</a></li>
+<li><a href="https://cloud.google.com/run/pricing" target="_blank" rel="noopener">https://cloud.google.com/run/pricing</a></li>
+<li><a href="https://cloud.google.com/blog/topics/developers-practitioners/a-guide-to-ai-cold-starts-on-cloud-run" target="_blank" rel="noopener">https://cloud.google.com/blog/topics/developers-practitioners/a-guide-to-ai-cold-starts-on-cloud-run</a></li>
+</ul>
+<p><strong>Local OCR</strong></p>
+<ul>
+<li><a href="https://docs.z.ai/guides/vlm/glm-ocr" target="_blank" rel="noopener">https://docs.z.ai/guides/vlm/glm-ocr</a></li>
+<li><a href="https://www.buildwithmatija.com/blog/run-glm-ocr-macbook-ollama" target="_blank" rel="noopener">https://www.buildwithmatija.com/blog/run-glm-ocr-macbook-ollama</a></li>
+<li><a href="https://github.com/Lulzx/paddleocr-vl.swift" target="_blank" rel="noopener">https://github.com/Lulzx/paddleocr-vl.swift</a></li>
+</ul>
+<p><strong>File Search and RAG</strong></p>
+<ul>
+<li><a href="https://ai.google.dev/gemini-api/docs/file-search" target="_blank" rel="noopener">https://ai.google.dev/gemini-api/docs/file-search</a></li>
+<li><a href="https://www.philschmid.de/gemini-file-search-javascript" target="_blank" rel="noopener">https://www.philschmid.de/gemini-file-search-javascript</a></li>
+<li><a href="https://github.com/pydantic/pydantic-ai/issues/6207" target="_blank" rel="noopener">https://github.com/pydantic/pydantic-ai/issues/6207</a></li>
+<li><a href="https://www.globenewswire.com/news-release/2026/09/21/3365524/0/en/google-cloud-brings-native-bm25-full-text-search-to-alloydb-and-cloud-sql-via-tiger-data-s-pg_textsearch.html" target="_blank" rel="noopener">https://www.globenewswire.com/news-release/2026/09/21/3365524/0/en/google-cloud-brings-native-bm25-full-text-search-to-alloydb-and-cloud-sql-via-tiger-data-s-pg_textsearch.html</a></li>
+<li><a href="https://github.com/VectifyAI/PageIndex" target="_blank" rel="noopener">https://github.com/VectifyAI/PageIndex</a></li>
+</ul>
+<p><strong>Handwriting</strong></p>
+<ul>
+<li><a href="https://github.com/run-llama/liteparse" target="_blank" rel="noopener">https://github.com/run-llama/liteparse</a></li>
+<li><a href="https://developers.llamaindex.ai/llamaparse/general/pricing/" target="_blank" rel="noopener">https://developers.llamaindex.ai/llamaparse/general/pricing/</a></li>
+<li><a href="https://landing.ai/blog/introducing-agentic-document-extraction-gen2" target="_blank" rel="noopener">https://landing.ai/blog/introducing-agentic-document-extraction-gen2</a></li>
+<li><a href="https://docs.landing.ai/ade/zdr" target="_blank" rel="noopener">https://docs.landing.ai/ade/zdr</a></li>
+<li><a href="https://arxiv.org/abs/2608.22959" target="_blank" rel="noopener">https://arxiv.org/abs/2608.22959</a></li>
+<li><a href="https://arxiv.org/abs/2608.18586" target="_blank" rel="noopener">https://arxiv.org/abs/2608.18586</a></li>
+<li><a href="https://huggingface.co/datalab-to/chandra-ocr-2" target="_blank" rel="noopener">https://huggingface.co/datalab-to/chandra-ocr-2</a></li>
+</ul>
+<p><strong>Graph</strong></p>
+<ul>
+<li><a href="https://github.com/neo4j-labs/neocarta" target="_blank" rel="noopener">https://github.com/neo4j-labs/neocarta</a></li>
+<li><a href="https://neo4j.com/pricing/" target="_blank" rel="noopener">https://neo4j.com/pricing/</a></li>
+<li><a href="https://neo4j.com/docs/operations-manual/current/authentication-authorization/limitations/" target="_blank" rel="noopener">https://neo4j.com/docs/operations-manual/current/authentication-authorization/limitations/</a></li>
+<li><a href="https://github.com/apache/age/discussions/2305" target="_blank" rel="noopener">https://github.com/apache/age/discussions/2305</a></li>
+<li><a href="https://github.com/orgs/supabase/discussions/40285" target="_blank" rel="noopener">https://github.com/orgs/supabase/discussions/40285</a></li>
+<li><a href="https://help.getzep.com/graphiti/getting-started/overview" target="_blank" rel="noopener">https://help.getzep.com/graphiti/getting-started/overview</a></li>
+<li><a href="https://www.falkordb.com/plans/" target="_blank" rel="noopener">https://www.falkordb.com/plans/</a></li>
+<li><a href="https://cloud.google.com/spanner/pricing" target="_blank" rel="noopener">https://cloud.google.com/spanner/pricing</a></li>
+</ul></section>
+  </main>
+</div>
+
+<button id="totop" type="button" aria-label="Back to top" hidden>↑</button>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var heads = Array.prototype.slice.call(document.querySelectorAll('main h2[id]'));
+  var mnav = document.getElementById('mnav');
+  var mcur = document.getElementById('mcur');
+  var bar = document.getElementById('progress');
+  var totop = document.getElementById('totop');
+
+  function setActive(id) {
+    links.forEach(function (a) { a.classList.toggle('active', a.dataset.target === id); });
+    var a = links.find(function (l) { return l.dataset.target === id; });
+    if (a && mcur) mcur.textContent = a.textContent.trim();
+    var railLink = document.querySelector('.rail .toc a.active');
+    if (railLink && railLink.scrollIntoView) {
+      var r = railLink.getBoundingClientRect(), rail = document.querySelector('.rail').getBoundingClientRect();
+      if (r.top < rail.top || r.bottom > rail.bottom) railLink.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function onScroll() {
+    var y = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    totop.hidden = y < 600;
+    var current = null;
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].getBoundingClientRect().top <= 120) current = heads[i].id; else break;
+    }
+    if (current) setActive(current);
+    else { links.forEach(function (a) { a.classList.remove('active'); }); if (mcur) mcur.textContent = 'Overview'; }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  links.forEach(function (a) {
+    a.addEventListener('click', function () { if (mnav) mnav.open = false; });
+  });
+  totop.addEventListener('click', function () { window.scrollTo({ top: 0 }); });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});</script>
+</body>
+</html>
