@@ -103,4 +103,12 @@ test("batch sheet → HACCP log → lot trace to the customer", async ({ page })
   await expect(page.getByText("1 trace gap(s)")).toBeVisible();
   await expect(page.getByText("Rose Water has no lot code", { exact: false })).toBeVisible();
   await shot(page, "16-trace-backward");
+
+  // Search tolerates the way people misspell things
+  await page.goto("/search");
+  await page.fill("#search_q", "temprature");
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("link", { name: /haccp-log\.pdf/ })).toBeVisible();
+  await expect(page.getByText("close spelling").first()).toBeVisible();
+  await shot(page, "17-search");
 });

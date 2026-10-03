@@ -2006,6 +2006,65 @@
         }
       }
     },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 25,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "title": "Response Search"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/ask": {
       "post": {
         "tags": [
@@ -4054,6 +4113,52 @@
           "role"
         ],
         "title": "RoleIn"
+      },
+      "SearchHit": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "matched": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "file",
+          "kind",
+          "page",
+          "score",
+          "matched",
+          "snippet"
+        ],
+        "title": "SearchHit"
       },
       "SignupIn": {
         "properties": {

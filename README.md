@@ -23,6 +23,7 @@ Postgres holds everything. Row-level security isolates each business's data.
 | Batch records | Batch sheets become signed-off batches: product, output lot, ingredient lots. A blank lot code blocks sign-off until a person records it as a trace gap. Formula deviations over 2% are flagged. Batch tables are append-only (trigger + revoked UPDATE/DELETE). |
 | Food safety | Critical control points with limits. HACCP logs become verified readings; a blank reading is *missing*, never passed, and every missing or out-of-range reading needs a written corrective action. One-click inspection binder PDF. |
 | Lot trace | Recursive SQL from any lot: back to supplier lots, forward through batches to the orders and customers that received it, with trace gaps called out. Lots are allocated on order lines. |
+| Search | Every page Keel reads is searchable: exact words (Postgres full-text), misspellings and shorthand (pg_trgm), and with an OpenAI key similar meaning (pgvector, `text-embedding-3-small` at 512 dims), fused by reciprocal rank fusion. Vectors record their model; `keel reindex` re-embeds after a model change. |
 | Ask Keel | A deepagents agent with skills (`backend/skills/`), shared rules, tenant memory, read-only tools and streamed answers. It works offline without API keys. |
 | Metering | The Desk shows token and page cost for every model call, per tenant. |
 
@@ -54,11 +55,13 @@ Add `OPENAI_API_KEY` for GPT-6 Luna extraction and full agent answers, and `GOOG
 ## Checks
 
 ```bash
-make test        # 22 backend integration tests against real Postgres (RLS, approvals, append-only, trace, injection, OCR, agent)
+make test        # 25 backend integration tests against real Postgres (RLS, approvals, append-only, trace, search, injection, OCR, agent)
 make lint        # ruff + eslint
 make typecheck   # mypy --strict + tsc
 make e2e         # Playwright: order → invoice → Ask Keel, and batch sheet → HACCP log → lot trace (needs make dev)
 ```
+
+CI (`.github/workflows/ci.yml`) runs the same checks on every push, then both Playwright journeys against a live stack, and fails if the generated API client is out of date.
 
 ## Docs
 

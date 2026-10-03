@@ -11,13 +11,14 @@ from decimal import Decimal
 from typing import Any
 
 from langchain_core.tools import BaseTool, tool
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from keel.audit.models import Approval, UsageEvent
 from keel.documents.models import Document
 from keel.domain.models import Customer, Invoice, Order, OrderLine, Product
 from keel.identity.models import Org
 from keel.platform.db import tenant_session
+from keel.search.hybrid import search as hybrid_search
 
 
 def _j(obj: Any) -> str:
@@ -177,28 +178,10 @@ def build_tools(org_id: uuid.UUID, user_id: uuid.UUID) -> list[BaseTool]:
 
     @tool
     async def search_documents(query: str) -> str:
-        """Full-text search over the text of uploaded documents. Returns document, page and a snippet."""
+        """Search the text of uploaded documents by words and by similarity (tolerates misspellings and shorthand).
+        Returns file, page, a snippet and whether it matched on words, similarity or both."""
         async with session() as db:
-            rows = (
-                await db.execute(
-                    text(
-                        "SELECT c.document_id, d.filename, c.page_n, "
-                        "ts_headline('english', c.text, plainto_tsquery('english', :q), 'MaxWords=25') AS snippet "
-                        "FROM chunks c JOIN documents d ON d.id = c.document_id "
-                        "WHERE c.tsv @@ plainto_tsquery('english', :q) "
-                        "ORDER BY ts_rank_cd(c.tsv, plainto_tsquery('english', :q)) DESC LIMIT 8"
-                    ),
-                    {"q": query},
-                )
-            ).all()
-            return _j(
-                {
-                    "matches": [
-                        {"document_id": r.document_id, "file": r.filename, "page": r.page_n, "snippet": r.snippet}
-                        for r in rows
-                    ]
-                }
-            )
+            return _j({"matches": await hybrid_search(db, query)})
 
     @tool
     async def catalog() -> str:

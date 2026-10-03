@@ -51,6 +51,8 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("migrate")
     sub.add_parser("seed")
     sub.add_parser("openapi")
+    reindex_cmd = sub.add_parser("reindex", help="re-embed documents for the current embedding model")
+    reindex_cmd.add_argument("--all", action="store_true", help="re-chunk and re-embed every document")
     args = parser.parse_args(argv)
 
     if args.cmd == "api":
@@ -67,6 +69,10 @@ def main(argv: list[str] | None = None) -> None:
         from keel.seed import seed
 
         asyncio.run(seed())
+    elif args.cmd == "reindex":
+        from keel.search.hybrid import reindex
+
+        print(f"indexed {asyncio.run(reindex(args.all))} chunk(s)")
     elif args.cmd == "openapi":
         from keel.api.app import create_app
 

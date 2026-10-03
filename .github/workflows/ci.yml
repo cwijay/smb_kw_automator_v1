@@ -90,9 +90,12 @@ jobs:
           timeout 90 bash -c 'until curl -sf localhost:8000/api/healthz && curl -sf -o /dev/null localhost:3000/login; do sleep 1; done'
       - run: pnpm exec playwright test
         working-directory: frontend
+      - name: Page state at failure
+        if: failure()
+        run: find frontend/test-results -name error-context.md -exec sh -c 'echo "== $1"; cat "$1"' _ {} \;
       - name: Server logs
         if: failure()
-        run: tail -n 100 api.log worker.log web.log
+        run: grep -v '" 200 OK' api.log | tail -n 80; tail -n 40 worker.log web.log
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: playwright-results, path: frontend/test-results, retention-days: 7 }

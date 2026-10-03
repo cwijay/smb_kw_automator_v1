@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
     from keel.domain.routes import router as domain_router
     from keel.identity.routes import router as identity_router
     from keel.production.routes import router as production_router
+    from keel.search.routes import router as search_router
     from keel.workflows.routes import router as workflow_router
 
     app = FastAPI(title="Keel API", version="0.1.0", lifespan=lifespan, generate_unique_id_function=lambda r: r.name)
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
         workflow_router,
         domain_router,
         production_router,
+        search_router,
         agent_router,
     ):
         api.include_router(r)

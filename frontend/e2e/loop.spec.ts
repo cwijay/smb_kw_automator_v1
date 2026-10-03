@@ -46,7 +46,7 @@ test("paper order → approved order → invoice → ask Keel", async ({ page })
   await shot(page, "03-desk");
 
   // Review the order pad: evidence boxes, held crossed-out line, approval gate
-  await page.getByText("order-pad.pdf").click();
+  await page.getByRole("link", { name: /^order-pad\.pdf/ }).click();
   await expect(page.getByText("Approval needed · create order")).toBeVisible();
   await expect(page.getByText("held back and not ordered", { exact: false })).toBeVisible();
   await page.locator("figure button").first().hover();
@@ -64,7 +64,7 @@ test("paper order → approved order → invoice → ask Keel", async ({ page })
 
   // The photo from an unknown customer is blocked until a person picks the customer
   await page.goto("/");
-  await page.getByText("order-photo.png").click();
+  await page.getByRole("link", { name: /^order-photo\.png/ }).click();
   await expect(page.getByText("is not a customer yet")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve and create order" })).toBeDisabled();
   await shot(page, "06-blocked-unknown-customer");

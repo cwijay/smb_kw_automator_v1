@@ -17,6 +17,7 @@ const NAV = [
   { href: "/production", label: "Production" },
   { href: "/food-safety", label: "Food safety" },
   { href: "/trace", label: "Trace" },
+  { href: "/search", label: "Search" },
   { href: "/catalog", label: "Catalog" },
   { href: "/team", label: "Team" },
 ];

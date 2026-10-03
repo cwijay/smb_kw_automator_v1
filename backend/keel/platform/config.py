@@ -1,5 +1,6 @@
 """Runtime configuration. Every tunable (model IDs, thresholds, limits) lives here, never in code."""
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -37,6 +38,16 @@ class Settings(BaseSettings):
     model_vision_handwriting: str = "google_genai:gemini-3.8-flash"
     model_reasoning: str = "fireworks:accounts/fireworks/models/glm-5p3"
     model_fallback: str = "openai:gpt-6-luna"
+
+    # Search: full-text + pg_trgm spelling + (live only) OpenAI embeddings, fused by RRF.
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dims: int = 512
+    embedding_usd_per_mtok: Decimal = Decimal("0.02")
+    chunk_chars: int = 600
+    rrf_k: int = 60
+    search_pool: int = 20
+    search_min_similarity: float = 0.25  # cosine floor for "similar meaning"
+    search_fuzzy: float = 0.5  # pg_trgm word_similarity floor for "close spelling"
 
     ocr_enabled: bool = True
     max_upload_mb: int = 25

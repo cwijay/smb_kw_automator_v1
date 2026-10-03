@@ -28,6 +28,7 @@ from keel.files.storage import doc_key, storage
 from keel.platform.config import get_settings
 from keel.platform.db import tenant_session
 from keel.platform.logging import log
+from keel.search.hybrid import index_pages
 
 CHECKS: dict[str, Callable[..., list[Finding]]] = {
     "order_pad": check_order,
@@ -91,6 +92,7 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
     rendered = render(data, mime)
     inputs: list[PageInput] = []
     page_ids: list[uuid.UUID] = []
+    page_texts: list[tuple[int, str]] = []
     async with tenant_session(org_id) as db:
         await db.execute(delete(Page).where(Page.document_id == document_id))
         await db.execute(delete(Chunk).where(Chunk.document_id == document_id))
@@ -114,15 +116,16 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
             page_ids.append(page.id)
             text = page_text(words)
             inputs.append(PageInput(png=rp.png, text=text, words=words))
-            if text.strip():
-                db.add(Chunk(org_id=org_id, document_id=document_id, page_n=n, text=text))
+            page_texts.append((n, text))
         doc = await db.get(Document, document_id)
         assert doc is not None
         doc.page_count = len(rendered)
         kind = "order_pad" if kind == "unknown" else kind
         if kind not in SCHEMAS:
             doc.status = "processed"
-            return None
+    await index_pages(org_id, document_id, page_texts)
+    if kind not in SCHEMAS:
+        return None
 
     model, check = MODELS[kind], CHECKS[kind]
     extractor = default_extractor()

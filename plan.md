@@ -12,19 +12,19 @@
 
 ## Implementation status (3 Oct 2026)
 
-**Built and verified:** M0 to M5, M6 except hybrid vector search, and a first version of the M7 onboarding seed.
+**Built and verified:** M0 to M6, CI, and a first version of the M7 onboarding seed.
 
 **Verification**
-- 22 backend integration tests on real Postgres (including append-only enforcement and a cross-tenant trace check).
-- 2 Playwright end-to-end journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace.
+- 25 backend integration tests on real Postgres (including append-only enforcement and cross-tenant trace and search checks).
+- 2 Playwright end-to-end journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace → search.
+- GitHub Actions CI runs all of the above on every push.
 - ruff, mypy --strict, eslint and tsc are all clean.
 
 **Not built yet**
-- M6: hybrid vector search (pgvector column exists, not populated).
 - Batch supersede (versioned re-issue) UI; the schema supports it.
 - Tier-4 adapters (Reducto, ADE, Sol).
 - The parser bake-off CLI.
-- The CI workflow and the Cloud Run deploy.
+- The Cloud Run deploy.
 
 **Divergences from the plan (each kept deliberately):**
 
@@ -33,10 +33,11 @@
 | AG-UI for agent streaming | Plain SSE endpoint (`/api/agent/ask`) with a small client reader | Fewer dependencies; same events (token, tool, tool_result, done) |
 | PP-OCRv5 via PaddleOCR | PP-OCR models via RapidOCR (ONNX runtime) | CPU-only, small install, no Paddle framework |
 | WeasyPrint invoices | fpdf2 | Pure Python; no system Pango libraries |
-| `halfvec(512)` | `vector(512)` column, populated later | Works with pgvector 0.6 (Ubuntu) as well as 0.8 |
+| `halfvec(512)` | `vector(512)` with an HNSW index | Works with pgvector 0.6 (Ubuntu) as well as 0.8 |
 | pgmq queue | `jobs` table with `FOR UPDATE SKIP LOCKED` | No extension needed; works on any Postgres |
 | deepagents in order intake | Deterministic matching (rapidfuzz + aliases) inside the LangGraph workflow | Matching must be repeatable and hash-stable for approvals; deepagents powers Ask Keel |
 | One workflow per document kind | One LangGraph engine (stage → gate → commit) with a `Flow` per kind (order, batch, HACCP) | Same gate, hash binding and resume logic for every kind; a new kind is one file |
+| `halfvec(512)` + RRF of full-text and vectors | `vector(512)` + RRF of three signals: full-text, pg_trgm word similarity, vectors (live only) | Trigram matching catches misspelled names that embeddings miss, works offline at zero cost, and keeps offline search honest instead of faking vectors |
 | Offline mode | Local rules extractor + offline tool-calling model | Lets the product run with no API keys and makes CI free |
 
 ## 0. Ground rules

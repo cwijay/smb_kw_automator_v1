@@ -1166,6 +1166,40 @@ export type RoleIn = {
 };
 
 /**
+ * SearchHit
+ */
+export type SearchHit = {
+    /**
+     * Document Id
+     */
+    document_id: string;
+    /**
+     * File
+     */
+    file: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Score
+     */
+    score: number;
+    /**
+     * Matched
+     */
+    matched: Array<string>;
+    /**
+     * Snippet
+     */
+    snippet: string;
+};
+
+/**
  * SignupIn
  */
 export type SignupIn = {
@@ -2583,6 +2617,42 @@ export type AllocateResponses = {
 };
 
 export type AllocateResponse = AllocateResponses[keyof AllocateResponses];
+
+export type SearchData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Q
+         */
+        q: string;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/search';
+};
+
+export type SearchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SearchError = SearchErrors[keyof SearchErrors];
+
+export type SearchResponses = {
+    /**
+     * Response Search
+     *
+     * Successful Response
+     */
+    200: Array<SearchHit>;
+};
+
+export type SearchResponse = SearchResponses[keyof SearchResponses];
 
 export type AskData = {
     body: AskIn;
