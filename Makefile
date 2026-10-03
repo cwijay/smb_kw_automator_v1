@@ -1,30 +1,46 @@
 # Keel: two components (backend/, frontend/) + Postgres. See README for first-time setup.
-.PHONY: setup db migrate seed api worker web dev test e2e lint typecheck build openapi langfuse langfuse-services langfuse-down
+.PHONY: setup sync db migrate seed api worker web backend frontend dev test e2e lint typecheck build openapi langfuse langfuse-services langfuse-down
+
+# `uv run` may re-sync the venv and macOS then re-hides the editable-install .pth files (Python 3.13 skips them).
+# `sync` fixes that once, then every run uses --no-sync.
+KEEL = cd backend && uv run --no-sync keel
+
+sync:
+	@cd backend && uv sync --extra ocr --extra observability -q
+	@chflags nohidden backend/.venv/lib/python*/site-packages/*.pth 2>/dev/null || true
 
 setup:            ## install backend + frontend dependencies
 	cd backend && uv sync --extra ocr --extra observability
+	@# macOS can mark .pth files hidden; Python 3.13 then skips them and `import keel` fails.
+	@if command -v chflags >/dev/null; then chflags nohidden backend/.venv/lib/python*/site-packages/*.pth; fi
 	cd frontend && pnpm install
 
 db:               ## start Postgres 17 + pgvector in Docker (skip if you run Postgres yourself)
 	docker compose up -d postgres
 
-migrate:          ## apply migrations (as the owner role)
-	cd backend && uv run keel migrate
+migrate: sync          ## apply migrations (as the owner role)
+	$(KEEL) migrate
 
-seed:             ## demo tenant: owner@demo.keel / keel-demo-2026
-	cd backend && uv run keel seed
+seed: sync             ## demo tenant: owner@demo.keel / keel-demo-2026
+	$(KEEL) seed
 
-api:
-	cd backend && uv run keel api --reload
+api: sync
+	$(KEEL) api --reload
 
-worker:
-	cd backend && uv run keel worker
+worker: sync
+	$(KEEL) worker
 
 web:
 	cd frontend && pnpm dev
 
-dev:              ## api + worker + web together (Ctrl-C stops all)
-	@trap 'kill 0' INT; (cd backend && uv run keel api --reload) & (cd backend && uv run keel worker) & (cd frontend && pnpm dev) & wait
+backend: sync          ## api :8000 + worker in one terminal (Ctrl-C stops both)
+	@trap 'kill 0' INT; ($(KEEL) api --reload) & ($(KEEL) worker) & wait
+
+frontend:         ## web :3000 in its own terminal
+	cd frontend && pnpm dev
+
+dev: sync              ## api + worker + web together (Ctrl-C stops all)
+	@trap 'kill 0' INT; ($(KEEL) api --reload) & ($(KEEL) worker) & (cd frontend && pnpm dev) & wait
 
 LANGFUSE = docker compose -f docker-compose.yml -f docker-compose.langfuse.yml
 

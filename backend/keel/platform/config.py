@@ -85,6 +85,14 @@ class Settings(BaseSettings):
             return True
         return bool(self.openai_api_key)
 
+    def api_key(self, provider: str) -> str | None:
+        """Keys loaded from .env never reach os.environ, so clients must be handed them explicitly."""
+        return {
+            "openai": self.openai_api_key,
+            "google_genai": self.google_api_key,
+            "fireworks": self.fireworks_api_key,
+        }.get(provider)
+
 
 @lru_cache
 def get_settings() -> Settings:

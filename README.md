@@ -40,8 +40,16 @@ make db                    # Postgres 17 + pgvector in Docker (creates roles kee
 cp backend/.env.example backend/.env   # optional: add OPENAI_API_KEY / GOOGLE_API_KEY
 make migrate
 make seed                  # demo business: catalog, CCPs, a signed batch, sample order/batch/HACCP papers
-make dev                   # API :8000, worker, web :3000
 ```
+
+Then start the two halves, each in its own terminal so the logs stay separate:
+
+```bash
+make backend               # terminal 1: API :8000 (auto-reload) + worker
+make frontend              # terminal 2: web :3000
+```
+
+`make dev` runs all three in one terminal with interleaved logs. Use `make api`, `make worker` and `make web` to run each process on its own.
 
 Open http://localhost:3000 and sign in as **owner@demo.keel** with password **keel-demo-2026**, or create your own business.
 

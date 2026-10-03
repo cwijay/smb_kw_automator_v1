@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import json
 import sys
+from pathlib import Path
 
 
 def _migrate() -> None:
@@ -70,7 +71,16 @@ def main(argv: list[str] | None = None) -> None:
     if args.cmd == "api":
         import uvicorn
 
-        uvicorn.run("keel.api.app:create_app", factory=True, host=args.host, port=args.port, reload=args.reload)
+        # Watch only our source: the default (cwd) includes .venv, so any dependency sync restarts the server.
+        reload_dirs = [str(Path(__file__).parent)] if args.reload else None
+        uvicorn.run(
+            "keel.api.app:create_app",
+            factory=True,
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            reload_dirs=reload_dirs,
+        )
     elif args.cmd == "worker":
         from keel.workers.runner import drain_and_exit, run_forever
 
@@ -94,8 +104,6 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def _evals(args: argparse.Namespace) -> None:
-    from pathlib import Path
-
     if args.evals_cmd == "synthetic":
         from keel.evals.synthetic import write
 

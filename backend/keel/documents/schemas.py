@@ -5,11 +5,14 @@ Absent is not zero: `status="unreadable"` or `"blank"` with `value=None` is a va
 
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, WithJsonSchema
 
 Status = Literal["read", "unreadable", "blank", "not_applicable"]
+# Pydantic's Decimal schema carries a lookahead regex that OpenAI structured outputs rejects.
+# The model sends a JSON number; validation still parses it into a Decimal.
+ModelDecimal = Annotated[Decimal, WithJsonSchema({"type": "number"})]
 
 
 class TextField(BaseModel):
@@ -19,7 +22,7 @@ class TextField(BaseModel):
 
 
 class NumberField(BaseModel):
-    value: Decimal | None = None
+    value: ModelDecimal | None = None
     status: Status = "blank"
     confidence: float = Field(default=0.0, ge=0, le=1)
 

@@ -33,7 +33,8 @@ class OpenAIEmbedder:
     async def embed(self, texts: list[str]) -> Embedded:
         from openai import AsyncOpenAI
 
-        r = await AsyncOpenAI().embeddings.create(model=self.model, input=texts, dimensions=self.dims)
+        client = AsyncOpenAI(api_key=get_settings().api_key("openai"))
+        r = await client.embeddings.create(model=self.model, input=texts, dimensions=self.dims)
         tokens = r.usage.total_tokens
         return Embedded([d.embedding for d in r.data], self.name, tokens, self.price * tokens / 1_000_000)
 

@@ -43,7 +43,7 @@ def chat_model() -> Any:
         return OfflineModel()
     provider, _, name = s.model_default.partition(":")
     kwargs: dict[str, Any] = {"use_responses_api": True, "reasoning": {"effort": "low"}} if provider == "openai" else {}
-    return init_chat_model(name, model_provider=provider, **kwargs)
+    return init_chat_model(name, model_provider=provider, api_key=s.api_key(provider), **kwargs)
 
 
 async def tenant_memory(org_id: uuid.UUID, user_id: uuid.UUID) -> str:

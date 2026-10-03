@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from keel.documents.engines.base import EngineResult, PageInput, cost
+from keel.platform.config import get_settings
 from keel.platform.tracing import trace_config
 
 SYSTEM = """You transcribe business paperwork for a small food producer into the given schema.
@@ -32,7 +33,7 @@ def _model(model_id: str) -> Any:
         kwargs = {"use_responses_api": True, "reasoning": {"effort": "none"}}
     elif provider == "google_genai":
         kwargs = {"thinking_level": "low"}
-    return init_chat_model(name, model_provider=provider, **kwargs)
+    return init_chat_model(name, model_provider=provider, api_key=get_settings().api_key(provider), **kwargs)
 
 
 class LlmExtractor:
