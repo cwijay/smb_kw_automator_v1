@@ -1,0 +1,96 @@
+# The same checks a contributor runs locally (see Makefile), on every push and pull request.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PGPASSWORD: postgres
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: { enable-cache: true, cache-dependency-glob: backend/uv.lock }
+      - name: Roles and databases
+        run: psql -h localhost -U postgres -f backend/scripts/init-db.sql
+      - run: uv sync --extra ocr --locked
+        working-directory: backend
+      - name: Lint
+        working-directory: backend
+        run: uv run ruff check keel tests migrations && uv run ruff format --check keel tests migrations
+      - name: Typecheck
+        working-directory: backend
+        run: uv run mypy keel
+      - name: Tests (real Postgres, RLS-bound app role)
+        working-directory: backend
+        run: uv run pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: frontend } }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec eslint .
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm build
+
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: { enable-cache: true, cache-dependency-glob: backend/uv.lock }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
+      - run: psql -h localhost -U postgres -f backend/scripts/init-db.sql
+      - run: uv sync --extra ocr --locked
+        working-directory: backend
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Generated API client matches the backend
+        run: make openapi && git diff --exit-code -- openapi.json frontend/lib/api/gen
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+      - name: Start the stack
+        run: |
+          (cd backend && uv run keel migrate)
+          (cd backend && nohup uv run keel api > ../api.log 2>&1 &)
+          (cd backend && nohup uv run keel worker > ../worker.log 2>&1 &)
+          (cd frontend && nohup pnpm start > ../web.log 2>&1 &)
+          timeout 90 bash -c 'until curl -sf localhost:8000/api/healthz && curl -sf -o /dev/null localhost:3000/login; do sleep 1; done'
+      - run: pnpm exec playwright test
+        working-directory: frontend
+      - name: Server logs
+        if: failure()
+        run: tail -n 100 api.log worker.log web.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-results, path: frontend/test-results, retention-days: 7 }
