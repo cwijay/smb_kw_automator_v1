@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     # Optional tracing (self-hosted Langfuse recommended: traces contain document text).
     langfuse_public_key: str | None = Field(default=None, validation_alias="LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key: str | None = Field(default=None, validation_alias="LANGFUSE_SECRET_KEY")
+    langfuse_base_url: str | None = Field(default=None, validation_alias="LANGFUSE_BASE_URL")
 
     ocr_enabled: bool = True
     max_upload_mb: int = 25

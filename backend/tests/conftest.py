@@ -9,6 +9,12 @@ os.environ.setdefault("KEEL_DATABASE_URL", "postgresql+psycopg://keel_app:keel_a
 os.environ.setdefault("KEEL_DATABASE_OWNER_URL", "postgresql+psycopg://keel_owner:keel_owner@localhost:5432/keel_test")
 os.environ.setdefault("KEEL_LLM_MODE", "fake")
 os.environ.setdefault("KEEL_STORAGE_DIR", "/tmp/keel-test-storage")
+# Hermetic: a developer's backend/.env (API keys, tracing) must not leak into tests.
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["GOOGLE_API_KEY"] = ""
+os.environ["LANGFUSE_PUBLIC_KEY"] = ""
+os.environ["LANGFUSE_SECRET_KEY"] = ""
+os.environ["LANGFUSE_BASE_URL"] = ""
 
 import httpx
 import pytest
