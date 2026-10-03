@@ -43,6 +43,20 @@ export type ActivityOut = {
 };
 
 /**
+ * AllocateIn
+ */
+export type AllocateIn = {
+    /**
+     * Lot Code
+     */
+    lot_code: string;
+    /**
+     * Quantity
+     */
+    quantity?: number | string | null;
+};
+
+/**
  * ApprovalDecisionIn
  */
 export type ApprovalDecisionIn = {
@@ -97,6 +111,82 @@ export type AskIn = {
 };
 
 /**
+ * BatchInputOut
+ */
+export type BatchInputOut = {
+    /**
+     * Ingredient
+     */
+    ingredient: string;
+    /**
+     * Lot Code
+     */
+    lot_code: string | null;
+    /**
+     * Quantity
+     */
+    quantity: string | null;
+    /**
+     * Unit
+     */
+    unit: string | null;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * BatchOut
+ */
+export type BatchOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Number
+     */
+    number: string;
+    /**
+     * Product
+     */
+    product: string | null;
+    /**
+     * Output Lot
+     */
+    output_lot: string | null;
+    /**
+     * Made On
+     */
+    made_on: string | null;
+    /**
+     * Quantity
+     */
+    quantity: string | null;
+    /**
+     * Unit
+     */
+    unit: string | null;
+    /**
+     * Prepared By
+     */
+    prepared_by: string | null;
+    /**
+     * Version
+     */
+    version: number;
+    /**
+     * Source Document Id
+     */
+    source_document_id: string | null;
+    /**
+     * Inputs
+     */
+    inputs?: Array<BatchInputOut>;
+};
+
+/**
  * Body_import_products
  */
 export type BodyImportProducts = {
@@ -117,7 +207,7 @@ export type BodyUpload = {
     /**
      * Kind
      */
-    kind?: 'order_pad' | 'other' | 'unknown';
+    kind?: 'order_pad' | 'batch_sheet' | 'haccp_log' | 'other' | 'unknown';
     /**
      * Source
      */
@@ -152,6 +242,62 @@ export type Box = {
      * Text
      */
     text: string;
+};
+
+/**
+ * CcpIn
+ */
+export type CcpIn = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Min Value
+     */
+    min_value?: number | string | null;
+    /**
+     * Max Value
+     */
+    max_value?: number | string | null;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Aliases
+     */
+    aliases?: Array<string>;
+};
+
+/**
+ * CcpOut
+ */
+export type CcpOut = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Min Value
+     */
+    min_value?: string | null;
+    /**
+     * Max Value
+     */
+    max_value?: string | null;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Aliases
+     */
+    aliases?: Array<string>;
+    /**
+     * Id
+     */
+    id: string;
 };
 
 /**
@@ -264,6 +410,8 @@ export type Dashboard = {
 
 /**
  * DecisionIn
+ *
+ * `revise` carries the owner's picks; Keel never guesses them.
  */
 export type DecisionIn = {
     /**
@@ -275,11 +423,31 @@ export type DecisionIn = {
      */
     customer_id?: string | null;
     /**
+     * Product Id
+     */
+    product_id?: string | null;
+    /**
      * Line Products
      */
     line_products?: {
         [key: string]: string;
     };
+    /**
+     * Line Ccps
+     */
+    line_ccps?: {
+        [key: string]: string;
+    };
+    /**
+     * Corrective Actions
+     */
+    corrective_actions?: {
+        [key: string]: string;
+    };
+    /**
+     * Acknowledge Missing Lots
+     */
+    acknowledge_missing_lots?: boolean | null;
 };
 
 /**
@@ -289,11 +457,19 @@ export type DecisionOut = {
     /**
      * Order Id
      */
-    order_id: string | null;
+    order_id?: string | null;
+    /**
+     * Batch Id
+     */
+    batch_id?: string | null;
+    /**
+     * Reading Ids
+     */
+    reading_ids?: Array<string>;
     /**
      * Approval Id
      */
-    approval_id: string | null;
+    approval_id?: string | null;
 };
 
 /**
@@ -378,6 +554,12 @@ export type DocumentOut = {
      * Order Id
      */
     order_id?: string | null;
+    /**
+     * Result
+     */
+    result?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -534,6 +716,14 @@ export type IssueIn = {
  */
 export type LineOut = {
     /**
+     * Id
+     */
+    id: string;
+    /**
+     * Lots
+     */
+    lots?: Array<string>;
+    /**
      * Description
      */
     description: string;
@@ -567,6 +757,24 @@ export type LoginIn = {
      * Password
      */
     password: string;
+};
+
+/**
+ * LotOut
+ */
+export type LotOut = {
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Kind
+     */
+    kind: string;
+    /**
+     * Name
+     */
+    name: string | null;
 };
 
 /**
@@ -898,6 +1106,56 @@ export type ProductOut = {
 };
 
 /**
+ * ReadingOut
+ */
+export type ReadingOut = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Ccp
+     */
+    ccp: string;
+    /**
+     * Batch Number
+     */
+    batch_number: string | null;
+    /**
+     * Value
+     */
+    value: string | null;
+    /**
+     * Unit
+     */
+    unit: string | null;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Recorded On
+     */
+    recorded_on: string | null;
+    /**
+     * Time
+     */
+    time: string | null;
+    /**
+     * Operator
+     */
+    operator: string | null;
+    /**
+     * Corrective Action
+     */
+    corrective_action: string | null;
+    /**
+     * Source Document Id
+     */
+    source_document_id: string | null;
+};
+
+/**
  * RoleIn
  */
 export type RoleIn = {
@@ -965,6 +1223,44 @@ export type TokenIn = {
      * Token
      */
     token: string;
+};
+
+/**
+ * TraceOut
+ */
+export type TraceOut = {
+    /**
+     * Lot
+     */
+    lot: {
+        [key: string]: unknown;
+    };
+    /**
+     * Backward
+     */
+    backward: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Batches
+     */
+    batches: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Forward Lots
+     */
+    forward_lots: number;
+    /**
+     * Customers
+     */
+    customers: Array<{
+        [key: string]: unknown;
+    }>;
+    /**
+     * Gaps
+     */
+    gaps: Array<string>;
 };
 
 /**
@@ -2036,6 +2332,257 @@ export type ActivityResponses = {
 };
 
 export type ActivityResponse = ActivityResponses[keyof ActivityResponses];
+
+export type ListBatchesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/batches';
+};
+
+export type ListBatchesResponses = {
+    /**
+     * Response List Batches
+     *
+     * Successful Response
+     */
+    200: Array<BatchOut>;
+};
+
+export type ListBatchesResponse = ListBatchesResponses[keyof ListBatchesResponses];
+
+export type GetBatchData = {
+    body?: never;
+    path: {
+        /**
+         * Batch Id
+         */
+        batch_id: string;
+    };
+    query?: never;
+    url: '/api/batches/{batch_id}';
+};
+
+export type GetBatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetBatchError = GetBatchErrors[keyof GetBatchErrors];
+
+export type GetBatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: BatchOut;
+};
+
+export type GetBatchResponse = GetBatchResponses[keyof GetBatchResponses];
+
+export type ListCcpsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/ccps';
+};
+
+export type ListCcpsResponses = {
+    /**
+     * Response List Ccps
+     *
+     * Successful Response
+     */
+    200: Array<CcpOut>;
+};
+
+export type ListCcpsResponse = ListCcpsResponses[keyof ListCcpsResponses];
+
+export type CreateCcpData = {
+    body: CcpIn;
+    path?: never;
+    query?: never;
+    url: '/api/ccps';
+};
+
+export type CreateCcpErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateCcpError = CreateCcpErrors[keyof CreateCcpErrors];
+
+export type CreateCcpResponses = {
+    /**
+     * Successful Response
+     */
+    200: CcpOut;
+};
+
+export type CreateCcpResponse = CreateCcpResponses[keyof CreateCcpResponses];
+
+export type ListReadingsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Days
+         */
+        days?: number;
+    };
+    url: '/api/haccp/readings';
+};
+
+export type ListReadingsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListReadingsError = ListReadingsErrors[keyof ListReadingsErrors];
+
+export type ListReadingsResponses = {
+    /**
+     * Response List Readings
+     *
+     * Successful Response
+     */
+    200: Array<ReadingOut>;
+};
+
+export type ListReadingsResponse = ListReadingsResponses[keyof ListReadingsResponses];
+
+export type HaccpBinderData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Days
+         */
+        days?: number;
+    };
+    url: '/api/haccp/binder.pdf';
+};
+
+export type HaccpBinderErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HaccpBinderError = HaccpBinderErrors[keyof HaccpBinderErrors];
+
+export type HaccpBinderResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ListLotsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Q
+         */
+        q?: string;
+    };
+    url: '/api/lots';
+};
+
+export type ListLotsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListLotsError = ListLotsErrors[keyof ListLotsErrors];
+
+export type ListLotsResponses = {
+    /**
+     * Response List Lots
+     *
+     * Successful Response
+     */
+    200: Array<LotOut>;
+};
+
+export type ListLotsResponse = ListLotsResponses[keyof ListLotsResponses];
+
+export type TraceData = {
+    body?: never;
+    path: {
+        /**
+         * Code
+         */
+        code: string;
+    };
+    query?: never;
+    url: '/api/lots/{code}/trace';
+};
+
+export type TraceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type TraceError = TraceErrors[keyof TraceErrors];
+
+export type TraceResponses = {
+    /**
+     * Successful Response
+     */
+    200: TraceOut;
+};
+
+export type TraceResponse = TraceResponses[keyof TraceResponses];
+
+export type AllocateData = {
+    body: AllocateIn;
+    path: {
+        /**
+         * Order Id
+         */
+        order_id: string;
+        /**
+         * Line Id
+         */
+        line_id: string;
+    };
+    query?: never;
+    url: '/api/orders/{order_id}/lines/{line_id}/lots';
+};
+
+export type AllocateErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AllocateError = AllocateErrors[keyof AllocateErrors];
+
+export type AllocateResponses = {
+    /**
+     * Response Allocate
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: string;
+    };
+};
+
+export type AllocateResponse = AllocateResponses[keyof AllocateResponses];
 
 export type AskData = {
     body: AskIn;

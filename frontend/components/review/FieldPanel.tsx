@@ -6,15 +6,40 @@ import { useState } from "react";
 import { Pill } from "@/components/ui";
 import { correctField, unwrap, type FieldOut } from "@/lib/api";
 
-const HEADER = ["customer_name", "order_number", "order_date", "delivery_date", "total_written"];
-const HEADER_LABEL: Record<string, string> = {
-  customer_name: "Customer",
-  order_number: "Order no.",
-  order_date: "Order date",
-  delivery_date: "Deliver",
-  total_written: "Total on paper",
+type Layout = { header: Record<string, string>; table: string; cols: Record<string, string> };
+
+/** What each document kind shows: header fields, then one table of repeated rows. */
+const LAYOUTS: Record<string, Layout> = {
+  order_pad: {
+    header: {
+      customer_name: "Customer",
+      order_number: "Order no.",
+      order_date: "Order date",
+      delivery_date: "Deliver",
+      total_written: "Total on paper",
+    },
+    table: "lines",
+    cols: { description: "Item as written", quantity: "Qty", unit_price: "Price", line_total: "Amount" },
+  },
+  batch_sheet: {
+    header: {
+      product_name: "Product",
+      batch_number: "Batch no.",
+      made_on: "Made on",
+      output_lot: "Output lot",
+      quantity: "Yield",
+      unit: "Unit",
+      prepared_by: "Prepared by",
+    },
+    table: "ingredients",
+    cols: { ingredient: "Ingredient", lot_code: "Lot", quantity: "Qty", unit: "Unit" },
+  },
+  haccp_log: {
+    header: { batch_number: "Batch no.", log_date: "Date", operator: "Operator" },
+    table: "readings",
+    cols: { ccp: "Control point", value: "Value", unit: "Unit", time: "Time", initials: "By" },
+  },
 };
-const LINE_COLS = ["description", "quantity", "unit_price", "line_total"];
 
 function Confidence({ f, low }: { f: FieldOut; low: number }) {
   if (f.status === "corrected") return <Pill tone="ledger">fixed by you</Pill>;
@@ -94,6 +119,7 @@ function Value({
 }
 
 export function FieldPanel({
+  kind,
   documentId,
   fields,
   activeId,
@@ -101,6 +127,7 @@ export function FieldPanel({
   editable,
   lowConfidence = 0.75,
 }: {
+  kind: string;
   documentId: string;
   fields: FieldOut[];
   activeId: string | null;
@@ -108,19 +135,22 @@ export function FieldPanel({
   editable: boolean;
   lowConfidence?: number;
 }) {
+  const layout = LAYOUTS[kind] ?? LAYOUTS.order_pad;
+  const cols = Object.keys(layout.cols);
+  const row = new RegExp(`^${layout.table}\\[(\\d+)\\]`);
   const byPath = new Map(fields.map((f) => [f.path, f]));
-  const lineCount = Math.max(-1, ...fields.map((f) => Number(f.path.match(/^lines\[(\d+)\]/)?.[1] ?? -1))) + 1;
+  const lineCount = Math.max(-1, ...fields.map((f) => Number(f.path.match(row)?.[1] ?? -1))) + 1;
   const common = { documentId, onSelect, editable, low: lowConfidence };
 
   return (
     <div className="space-y-5">
       <dl className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-x-2 gap-y-1">
-        {HEADER.map((p) => {
+        {Object.entries(layout.header).map(([p, label]) => {
           const f = byPath.get(p);
           if (!f) return null;
           return (
             <div key={p} className="contents">
-              <dt className="text-xs text-muted">{HEADER_LABEL[p]}</dt>
+              <dt className="text-xs text-muted">{label}</dt>
               <dd className="min-w-0"><Value f={f} active={activeId === f.id} {...common} /></dd>
               <dd><Confidence f={f} low={lowConfidence} /></dd>
             </div>
@@ -131,19 +161,16 @@ export function FieldPanel({
         <table className="w-full min-w-[30rem] text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">
-              <th className="pb-1 font-normal">Item as written</th>
-              <th className="pb-1 font-normal">Qty</th>
-              <th className="pb-1 font-normal">Price</th>
-              <th className="pb-1 font-normal">Amount</th>
+              {cols.map((c) => <th key={c} className="pb-1 font-normal">{layout.cols[c]}</th>)}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: lineCount }, (_, i) => (
               <tr key={i} className="border-t border-line align-top">
-                {LINE_COLS.map((c) => {
-                  const f = byPath.get(`lines[${i}].${c}`);
+                {cols.map((c, ci) => {
+                  const f = byPath.get(`${layout.table}[${i}].${c}`);
                   return (
-                    <td key={c} className={clsx("py-1 pr-1", c === "description" ? "w-1/2" : "w-1/6")}>
+                    <td key={c} className={clsx("py-1 pr-1", ci === 0 ? "w-2/5" : "")}>
                       {f && <Value f={f} active={activeId === f.id} {...common} />}
                     </td>
                   );

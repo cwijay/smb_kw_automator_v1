@@ -40,9 +40,13 @@ def _status(value: Decimal | None, ccp: CcpDefinition | None) -> str:
     return "read"
 
 
+def _num(v: Decimal) -> str:
+    return format(v.normalize(), "f")  # 165.000 -> "165", 6.50 -> "6.5"
+
+
 def _limit(ccp: CcpDefinition) -> str:
-    lo = f"≥ {ccp.min_value:g}" if ccp.min_value is not None else ""
-    hi = f"≤ {ccp.max_value:g}" if ccp.max_value is not None else ""
+    lo = f"≥ {_num(ccp.min_value)}" if ccp.min_value is not None else ""
+    hi = f"≤ {_num(ccp.max_value)}" if ccp.max_value is not None else ""
     return " and ".join(x for x in (lo, hi) if x) + f" {ccp.unit}"
 
 

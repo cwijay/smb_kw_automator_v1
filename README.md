@@ -1,11 +1,11 @@
 # Keel
 
-Keel turns small food producers' paperwork into orders, invoices and food-safety records. Owners photograph or upload what they already use: order pads, scans and emailed orders. Every value links back to where it was written, and nothing is created, sent or posted without a person's approval.
+Keel turns small food producers' paperwork into orders, invoices, batch records and food-safety logs. Owners photograph or upload what they already use: order pads, batch sheets, HACCP logs, scans and emailed orders. Every value links back to where it was written, and nothing is created, sent or posted without a person's approval.
 
 Keel is two components:
 
 - **`backend/`**: FastAPI with LangGraph and deepagents. It handles tenants and users, documents and the AI pipeline, approval-gated workflows, invoicing and the Ask Keel agent.
-- **`frontend/`**: Next.js 16. It provides the Desk, the review screen with evidence boxes, orders, invoices, catalog, team and the Ask Keel panel.
+- **`frontend/`**: Next.js 16. It provides the Desk, the review screen with evidence boxes, orders, invoices, production, food safety, lot trace, catalog, team and the Ask Keel panel.
 
 Postgres holds everything. Row-level security isolates each business's data.
 
@@ -20,6 +20,9 @@ Postgres holds everything. Row-level security isolates each business's data.
 | Evidence | Each value is boxed on the page image. Hover a field to see where it was read; click to correct it. |
 | Approvals | LangGraph workflow pauses at a gate. The approval is bound to a hash of exactly what will be written; edits made after approval need a new approval. |
 | Orders → invoices | Prices come from the customer's price list or the catalog, never the paper. Issuing an invoice is a separate approval. Invoices export as PDF and as QuickBooks or Xero CSV. |
+| Batch records | Batch sheets become signed-off batches: product, output lot, ingredient lots. A blank lot code blocks sign-off until a person records it as a trace gap. Formula deviations over 2% are flagged. Batch tables are append-only (trigger + revoked UPDATE/DELETE). |
+| Food safety | Critical control points with limits. HACCP logs become verified readings; a blank reading is *missing*, never passed, and every missing or out-of-range reading needs a written corrective action. One-click inspection binder PDF. |
+| Lot trace | Recursive SQL from any lot: back to supplier lots, forward through batches to the orders and customers that received it, with trace gaps called out. Lots are allocated on order lines. |
 | Ask Keel | A deepagents agent with skills (`backend/skills/`), shared rules, tenant memory, read-only tools and streamed answers. It works offline without API keys. |
 | Metering | The Desk shows token and page cost for every model call, per tenant. |
 
@@ -32,7 +35,7 @@ make setup                 # backend + frontend dependencies
 make db                    # Postgres 17 + pgvector in Docker (creates roles keel_owner / keel_app)
 cp backend/.env.example backend/.env   # optional: add OPENAI_API_KEY / GOOGLE_API_KEY
 make migrate
-make seed                  # demo business with sample documents
+make seed                  # demo business: catalog, CCPs, a signed batch, sample order/batch/HACCP papers
 make dev                   # API :8000, worker, web :3000
 ```
 
@@ -51,10 +54,10 @@ Add `OPENAI_API_KEY` for GPT-6 Luna extraction and full agent answers, and `GOOG
 ## Checks
 
 ```bash
-make test        # 16 backend integration tests against real Postgres (RLS, approvals, injection, OCR, agent)
+make test        # 22 backend integration tests against real Postgres (RLS, approvals, append-only, trace, injection, OCR, agent)
 make lint        # ruff + eslint
 make typecheck   # mypy --strict + tsc
-make e2e         # Playwright: sign-up → catalog → upload → review → approve → invoice → Ask Keel (needs make dev)
+make e2e         # Playwright: order → invoice → Ask Keel, and batch sheet → HACCP log → lot trace (needs make dev)
 ```
 
 ## Docs

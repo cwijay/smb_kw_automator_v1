@@ -12,16 +12,16 @@
 
 ## Implementation status (3 Oct 2026)
 
-**Built and verified:** M0, M1, M2 (minus tier-4 adapters), M3, M4, the Ask Keel part of M6, and a first version of the M7 onboarding seed.
+**Built and verified:** M0 to M5, M6 except hybrid vector search, and a first version of the M7 onboarding seed.
 
 **Verification**
-- 16 backend integration tests on real Postgres.
-- 1 Playwright end-to-end loop test.
+- 22 backend integration tests on real Postgres (including append-only enforcement and a cross-tenant trace check).
+- 2 Playwright end-to-end journeys: order → invoice → Ask Keel, and batch sheet → HACCP log → lot allocation → trace.
 - ruff, mypy --strict, eslint and tsc are all clean.
 
 **Not built yet**
-- M5: batch and HACCP records.
-- M6: lot trace and hybrid vector search.
+- M6: hybrid vector search (pgvector column exists, not populated).
+- Batch supersede (versioned re-issue) UI; the schema supports it.
 - Tier-4 adapters (Reducto, ADE, Sol).
 - The parser bake-off CLI.
 - The CI workflow and the Cloud Run deploy.
@@ -36,6 +36,7 @@
 | `halfvec(512)` | `vector(512)` column, populated later | Works with pgvector 0.6 (Ubuntu) as well as 0.8 |
 | pgmq queue | `jobs` table with `FOR UPDATE SKIP LOCKED` | No extension needed; works on any Postgres |
 | deepagents in order intake | Deterministic matching (rapidfuzz + aliases) inside the LangGraph workflow | Matching must be repeatable and hash-stable for approvals; deepagents powers Ask Keel |
+| One workflow per document kind | One LangGraph engine (stage → gate → commit) with a `Flow` per kind (order, batch, HACCP) | Same gate, hash binding and resume logic for every kind; a new kind is one file |
 | Offline mode | Local rules extractor + offline tool-calling model | Lets the product run with no API keys and makes CI free |
 
 ## 0. Ground rules

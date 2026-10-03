@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { LotCell } from "@/components/production/LotCell";
 import { Button, Card, ErrorNote, PageTitle, Pill, STATUS_TEXT } from "@/components/ui";
 import { decideApproval, getOrder, issueInvoice, stageInvoice, unwrap } from "@/lib/api";
 import { day, money } from "@/lib/format";
@@ -47,18 +48,19 @@ export default function OrderPage() {
         <Card className="overflow-x-auto p-5">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted">
-              <tr><th className="pb-2 font-normal">Item</th><th className="pb-2 text-right font-normal">Qty</th><th className="pb-2 text-right font-normal">Price</th><th className="pb-2 text-right font-normal">Total</th></tr>
+              <tr><th className="pb-2 font-normal">Item</th><th className="pb-2 font-normal">Lots shipped</th><th className="pb-2 text-right font-normal">Qty</th><th className="pb-2 text-right font-normal">Price</th><th className="pb-2 text-right font-normal">Total</th></tr>
             </thead>
             <tbody>
               {o.lines?.map((l, i) => (
                 <tr key={i} className="border-t border-line">
                   <td className="py-2">{l.description}</td>
+                  <td className="py-2"><LotCell orderId={o.id} lineId={l.id} lots={l.lots ?? []} editable={canEdit(me.data?.role)} /></td>
                   <td className="num py-2 text-right">{Number(l.quantity)} {l.unit}</td>
                   <td className="num py-2 text-right">{money(l.unit_price, o.currency)}</td>
                   <td className="num py-2 text-right">{money(l.line_total, o.currency)}</td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-ink font-medium"><td className="py-2" colSpan={3}>Total</td><td className="num py-2 text-right">{money(o.total, o.currency)}</td></tr>
+              <tr className="border-t-2 border-ink font-medium"><td className="py-2" colSpan={4}>Total</td><td className="num py-2 text-right">{money(o.total, o.currency)}</td></tr>
             </tbody>
           </table>
           <p className="mt-4 text-xs text-muted">

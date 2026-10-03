@@ -8,7 +8,7 @@ import { ApprovalCard } from "@/components/review/ApprovalCard";
 import { FieldPanel } from "@/components/review/FieldPanel";
 import { PageViewer } from "@/components/review/PageViewer";
 import { Card, ErrorNote, Pill, STATUS_TEXT, statusTone } from "@/components/ui";
-import { detail, unwrap } from "@/lib/api";
+import { detail, unwrap, type DocumentOut } from "@/lib/api";
 import { canEdit, useMe } from "@/lib/hooks";
 
 export default function ReviewPage() {
@@ -63,7 +63,7 @@ export default function ReviewPage() {
           {fields.length > 0 && (
             <Card className="p-5">
               <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">What Keel read</h2>
-              <FieldPanel documentId={doc.id} fields={fields} activeId={active} onSelect={setActive} editable={canEdit(me.data?.role)} />
+              <FieldPanel kind={doc.kind} documentId={doc.id} fields={fields} activeId={active} onSelect={setActive} editable={canEdit(me.data?.role)} />
             </Card>
           )}
           {checks.length > 0 && (
@@ -82,20 +82,34 @@ export default function ReviewPage() {
           {approval && doc.run_id && approval.status === "pending" && (
             <ApprovalCard key={approval.id} approval={approval} runId={doc.run_id} editable={canEdit(me.data?.role)} />
           )}
-          {doc.order_id && (
-            <div className="rounded-xl border border-ledger bg-ledger-soft p-5">
-              <p className="font-semibold text-ledger">Order created.</p>
-              <p className="mt-1 text-sm">It is recorded with your approval and links back to this page.</p>
-              <Link href={`/orders/${doc.order_id}`} className="mt-3 inline-block text-sm font-medium underline underline-offset-4">
-                Open the order →
-              </Link>
-            </div>
-          )}
-          {doc.status === "processed" && !approval && !doc.order_id && (
-            <p className="rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">This document is closed. No order was created from it.</p>
+          <Recorded doc={doc} />
+          {doc.run_status === "cancelled" && (
+            <p className="rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">This document is closed. It was rejected, so nothing was recorded from it.</p>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** What approving this document wrote, with a link to it. Stays after refetches, unlike a toast. */
+function Recorded({ doc }: { doc: DocumentOut }) {
+  const r = (doc.result ?? {}) as { batch_id?: string; reading_ids?: string[] };
+  const done = doc.order_id
+    ? { title: "Order created.", href: `/orders/${doc.order_id}`, link: "Open the order" }
+    : r.batch_id
+      ? { title: "Batch signed off.", href: `/production/${r.batch_id}`, link: "Open the batch record" }
+      : r.reading_ids
+        ? { title: `${r.reading_ids.length} HACCP reading(s) verified.`, href: "/food-safety", link: "Open food safety" }
+        : null;
+  if (!done) return null;
+  return (
+    <div className="rounded-xl border border-ledger bg-ledger-soft p-5">
+      <p className="font-semibold text-ledger">{done.title}</p>
+      <p className="mt-1 text-sm">It is recorded with your approval and links back to this page.</p>
+      <Link href={done.href} className="mt-3 inline-block text-sm font-medium underline underline-offset-4">
+        {done.link} →
+      </Link>
     </div>
   );
 }

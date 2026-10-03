@@ -5,6 +5,13 @@ import clsx from "clsx";
 import { useRef, useState } from "react";
 import { unwrap, upload } from "@/lib/api";
 
+const KINDS = [
+  { id: "order_pad", label: "Orders", hint: "Order pads, emailed orders, scans." },
+  { id: "batch_sheet", label: "Batch sheets", hint: "What was made, from which ingredient lots." },
+  { id: "haccp_log", label: "HACCP logs", hint: "Temperature and weight checks." },
+] as const;
+type Kind = (typeof KINDS)[number]["id"];
+
 /** Paper in: drag files, pick files, or take a photo (opens the camera on phones). */
 export function Dropzone({ disabled }: { disabled?: boolean }) {
   const qc = useQueryClient();
@@ -12,13 +19,14 @@ export function Dropzone({ disabled }: { disabled?: boolean }) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
+  const [kind, setKind] = useState<Kind>("order_pad");
 
   async function send(files: FileList | null, source: "upload" | "camera") {
     if (!files?.length) return;
     const out: string[] = [];
     for (const file of Array.from(files)) {
       try {
-        const doc = await unwrap(upload({ body: { file, kind: "order_pad", source } }));
+        const doc = await unwrap(upload({ body: { file, kind, source } }));
         out.push(doc.duplicate ? `${file.name}: already on your desk, not read twice.` : `${file.name}: reading…`);
       } catch (err) {
         out.push(`${file.name}: ${(err as Error).message}`);
@@ -49,8 +57,22 @@ export function Dropzone({ disabled }: { disabled?: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-lg font-semibold tracking-tight">Drop today&apos;s paper here</p>
-          <p className="mt-1 text-sm text-muted">
-            Order pads, emailed orders, scans. PDF or photo. Keel reads it, checks the maths and asks before anything is created.
+          <div role="radiogroup" aria-label="What kind of paper" className="mt-2 inline-flex rounded-lg border border-line p-0.5 text-sm">
+            {KINDS.map((k) => (
+              <button
+                key={k.id}
+                id={`kind_${k.id}`}
+                role="radio"
+                aria-checked={kind === k.id}
+                onClick={() => setKind(k.id)}
+                className={clsx("rounded-md px-3 py-1", kind === k.id ? "bg-ink text-bg" : "text-muted hover:text-ink")}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            {KINDS.find((k) => k.id === kind)?.hint} PDF or photo. Keel reads it, checks it and asks before anything is recorded.
           </p>
         </div>
         <div className="flex gap-2">

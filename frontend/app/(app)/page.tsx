@@ -19,6 +19,8 @@ function Stat({ label, value, tone, hint }: { label: string; value: string | num
   );
 }
 
+const KIND_TEXT: Record<string, string> = { order_pad: "Order", batch_sheet: "Batch sheet", haccp_log: "HACCP log" };
+
 const ACTION_TEXT: Record<string, string> = {
   "document.uploaded": "Paper received",
   "document.extracted": "Keel read a document",
@@ -26,6 +28,10 @@ const ACTION_TEXT: Record<string, string> = {
   "approval.rejected": "Rejected or revised",
   "order.created": "Order created",
   "invoice.issued": "Invoice issued",
+  "batch.signed_off": "Batch signed off",
+  "haccp.recorded": "HACCP log verified",
+  "lot.allocated": "Lot shipped on an order",
+  "ccp.created": "Control point added",
   "field.corrected": "Field corrected",
   "customer.created": "Customer added",
   "product.created": "Product added",
@@ -77,7 +83,7 @@ export default function DeskPage() {
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <section>
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">Paper on your desk</h2>
-          {docs.data?.length === 0 && <Empty title="Nothing here yet">Drop an order pad above, or run <code>keel seed</code> for demo documents.</Empty>}
+          {docs.data?.length === 0 && <Empty title="Nothing here yet">Drop an order pad, batch sheet or HACCP log above, or run <code>keel seed</code> for demo documents.</Empty>}
           <ul className="space-y-2">
             {docs.data?.map((doc) => {
               const waiting = doc.run_status === "waiting_approval";
@@ -90,7 +96,7 @@ export default function DeskPage() {
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{doc.filename}</p>
-                      <p className="text-xs text-muted">{doc.source === "camera" ? "Photo" : "Upload"} · {ago(doc.created_at)}{doc.page_count ? ` · ${doc.page_count} page(s)` : ""}</p>
+                      <p className="text-xs text-muted">{KIND_TEXT[doc.kind] ?? "Paper"} · {doc.source === "camera" ? "photo" : "upload"} · {ago(doc.created_at)}{doc.page_count ? ` · ${doc.page_count} page(s)` : ""}</p>
                     </div>
                     <Pill tone={statusTone(status)}>{STATUS_TEXT[status] ?? status}</Pill>
                   </Link>
