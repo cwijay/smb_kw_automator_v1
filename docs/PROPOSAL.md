@@ -101,6 +101,8 @@ This plugin is the best public reference for SMB agent skills, and we should lea
 |---|---|
 | Dairy and supplier invoices, delivery notes, credit notes (often marked up by hand) | A three-way match (purchase order ↔ delivery note ↔ invoice); handwritten shortages detected and turned into credit-note requests |
 | **Royalty and ad-fund reporting** (e.g. Baskin-Robbins: 5.9% royalty plus 5% ad fund on gross sales) | POS sales (Toast/Square) → royalty statement → franchisor portal; mismatches explained |
+| Handwritten customer order pads (wholesale and catering orders) | Photo → order lines, normalised to the product catalogue, with handwriting rules (grouped pricing, strike-throughs, circled totals) → invoice draft or a QuickBooks import file |
+| Production batch sheets and QC records (for owners who make product in-house) | Scanned forms → batch lot linked to ingredient lots, QC checks and packing; blank critical readings flagged as missing |
 | **HACCP temperature logs** (freezer and dipping cabinet; UK "Safer Food Better Business" diary) | Photo of the paper log or a sensor feed → an alert when out of range → a compliance record that holds up in an audit |
 | Seasonal hiring and onboarding (US I-9; UK right-to-work checks), shift scheduling, payroll prep | Onboarding checklist agent; rota agent; payroll prep handed to Gusto or Xero Payroll |
 | **Multi-location consolidation** | Books per location, then a consolidated P&L, then a franchisor KPI pack |
@@ -245,13 +247,7 @@ The shape is the one already proven in `recon_knowledge_work_agent_v2` (`assembl
   - **Analyst.** Chat over the semantic layer. It uses `search_context` then `run_metric` and never writes free SQL against the ledger. This follows Prism's gateway.
   - **Recipe engineer (coding agent).** Runs in the sandbox. It writes `recipe.py` for a new document layout or connector export, and loops on `recipes check` against golden files, up to N attempts. The output is versioned per tenant **and** can be promoted to a pack-level recipe (§6).
   - **Reporter.** Builds tax packs (VAT/MTD, Schedule C, 1099 list at the $2,000 threshold from 2026), royalty statements, CACFP claims and inspection binders. Its output is files (XLSX/PDF) plus an evidence appendix.
-- **Gates are LangGraph nodes, not prompts.** The run follows a fixed spine:
-
-  ```
-  intake → extract → validate → gate_review → post_draft → gate_approve → sync_to_ledger → finalize
-  ```
-
-  It pauses with `interrupt()` and checkpoints to Postgres. Approvals are written to an append-only `decisions` table.
+- **Gates are LangGraph nodes, not prompts.** The run follows a fixed spine: `intake → extract → validate → gate_review → post_draft → gate_approve → sync_to_ledger → finalize`. It pauses with `interrupt()` and checkpoints to Postgres. Approvals are written to an append-only `decisions` table.
 - **Middleware**, reused from recon v2 and paid-media: `OffloadMiddleware` (large tool results go to files), `RedactionMiddleware` (secrets and PII), retry and call limits, `current_date`, and a new **`BudgetMiddleware`** that enforces a per-tenant monthly AI-spend ceiling and drops to cheaper model tiers as it nears the cap.
 - **Untrusted-content guard.** Document text is data and never instructions (from Anthropic's `untrusted-content.md`). A change to a supplier's bank details always triggers a hard approval.
 
@@ -281,6 +277,8 @@ The shape is the one already proven in `recon_knowledge_work_agent_v2` (`assembl
 - handwritten *amounts* never post without either matching another source (POS, bank, PO) or a human tap;
 - we build an **internal gold set** of 300–500 real pages per vertical from day one;
 - we route by measured accuracy on that gold set, not by vendor claims.
+
+Also assume most small-business scans have **no text layer**: phone photos and photocopied forms go straight to tier 1 OCR. Validators need handwriting-specific rules for grouped prices, crossed-out lines, circled totals and tick marks.
 
 ### 4.5 Semantic layer and context graph: the per-tenant "business brain"
 
@@ -550,7 +548,7 @@ Assumes about 800 pages a month, 60 chat turns, and one month-end close.
 | Phase | Weeks | Deliverables | Exit criteria |
 |---|---|---|---|
 | **0. Foundations** | 1–3 | Monorepo; Postgres with RLS and the multi-tenant schema; auth (WorkOS/Clerk); assembly of deepagents and LangGraph; model router with cost logging; R2 blob store; pgmq intake | Isolation tests pass (a cross-tenant canary never leaks) |
-| **1. Doc pipeline v1** | 3–6 | Tiers 0–3; validator library; evidence model with bounding boxes; review UI with overlay; gold set of 300 pages (day care + ice cream) | Field accuracy ≥97% after review routing; cost ≤$3 per 1k pages measured |
+| **1. Doc pipeline v1** | 3–6 | Tiers 0–3; validator library (including handwriting rules: grouped pricing, strike-throughs, circled totals, tick marks); evidence model with bounding boxes; review UI with overlay; gold set of 300 pages (day care + ice cream) | Field accuracy ≥97% after review routing; cost ≤$3 per 1k pages measured |
 | **2. Bookkeeper + ledger sync** | 5–9 | `core-bookkeeping` pack: AP intake, three-way match, vendor master, Xero/QBO draft sync, bank reconciliation, month-end close, consolidation | A pilot tenant closes a real month with fewer than 10 manual touches |
 | **3. Day-care pack (UK)** | 8–12 | Rota and ratio checker, certificate vault, funded-hours claim, parent billing, Ofsted binder, MTD/VAT tax pack | 5 paying centres |
 | **4. Recipes + learning loop** | 10–14 | Recipe engineer in sandbox; layout fingerprinting; tenant memory; nightly distiller; eval-gated promotion of pack versions | ≥40% of repeat documents skip tier 2 |

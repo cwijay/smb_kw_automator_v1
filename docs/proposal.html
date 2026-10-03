@@ -1,0 +1,1517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keel Platform Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky ledger-style contents rail on the left, one reading column on the right; rail collapses into a top "Contents" drawer on phones. */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --ink: #16201c;
+  --muted: #56645e;
+  --line: #dde3df;
+  --accent: #0e6b59;
+  --accent-soft: #e2f0eb;
+  --mark: #f6e7a3;
+  --code-bg: #eef2ef;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rail: 268px;
+  --col: 860px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+    --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #151d1a; --ink: #e4ebe8; --muted: #98a7a1; --line: #25302c;
+  --accent: #5cc9ab; --accent-soft: #173029; --mark: #4a4220; --code-bg: #1a2420; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: var(--accent); z-index: 50; transition: width .1s linear;
+}
+
+.shell {
+  display: grid; grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 48px; max-width: calc(var(--rail) + var(--col) + 48px + 64px);
+  margin: 0 auto; padding-inline: 32px; padding-block: 0 96px;
+}
+
+/* ---------- contents rail ---------- */
+.rail {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  align-self: start; max-height: 100vh; overflow-y: auto;
+  padding-block: 40px 24px;
+}
+.rail .brand {
+  font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em;
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
+}
+.rail .brand small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+.rail .tag { color: var(--muted); font-size: 13px; margin: 0 0 24px; line-height: 1.45; }
+.toc-label {
+  font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 8px;
+}
+.toc { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
+.toc a {
+  display: grid; grid-template-columns: 26px 1fr; gap: 4px; align-items: baseline;
+  padding: 5px 10px; margin-left: -1px; border-left: 2px solid transparent;
+  color: var(--muted); text-decoration: none; font-size: 14px; line-height: 1.35;
+}
+.toc a .n { font-family: var(--f-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.toc a:hover { color: var(--ink); }
+.toc a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+.rail .src-note { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* mobile contents drawer */
+.mnav { display: none; }
+
+/* ---------- main column ---------- */
+main { min-width: 0; padding-top: 40px; }
+.hero { padding-bottom: 32px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px;
+}
+.eyebrow span + span::before { content: "·"; margin-right: 14px; color: var(--line); }
+.hero h1 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(40px, 7vw, 68px);
+  line-height: 1; letter-spacing: -0.03em; margin: 16px 0 12px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero .sub { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 46ch; margin: 0; text-wrap: balance; }
+.stats {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  margin-top: 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden;
+}
+.stat { padding: 14px 16px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .v { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.stats-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+blockquote.lede {
+  margin: 28px 0 0; padding: 18px 22px; background: var(--accent-soft);
+  border-radius: 10px; font-size: 17px; line-height: 1.6;
+}
+blockquote.lede p { margin: 0 0 .6em; } blockquote.lede p:last-child { margin: 0; }
+blockquote.lede strong { color: var(--accent); }
+
+.sec { padding-top: 40px; }
+.sec + .sec { border-top: 1px solid var(--line); margin-top: 40px; }
+h2 {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 34px);
+  letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 18px; text-wrap: balance;
+}
+h3 {
+  font-family: var(--f-display); font-weight: 500; font-size: 21px; letter-spacing: -0.01em;
+  margin: 32px 0 10px; text-wrap: balance;
+}
+p, li { max-width: 72ch; overflow-wrap: break-word; }
+ul, ol { padding-left: 1.3em; }
+li { margin: 4px 0; }
+li > ul, li > ol { margin: 4px 0; }
+strong { font-weight: 600; }
+hr { display: none; }
+code {
+  font-family: var(--f-mono); font-size: .86em; background: var(--code-bg);
+  padding: .1em .35em; border-radius: 4px; overflow-wrap: anywhere;
+}
+blockquote:not(.lede) {
+  margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--accent); color: var(--ink);
+}
+p strong:only-child { }
+mark, .hl { background: var(--mark); padding: 0 .15em; border-radius: 2px; }
+
+.table-wrap {
+  overflow-x: auto; margin: 16px 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+}
+table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th {
+  font-family: var(--f-mono); font-size: 11.5px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); background: var(--code-bg); white-space: nowrap;
+}
+td:first-child { font-weight: 500; min-width: 130px; }
+td { font-variant-numeric: tabular-nums; }
+td code { font-size: .82em; }
+
+.code-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--line); }
+.code-wrap pre { margin: 0; padding: 16px 18px; }
+.code-wrap code { background: none; padding: 0; font-size: 13px; line-height: 1.55; overflow-wrap: normal; white-space: pre; }
+
+.diagram {
+  overflow-x: auto; margin: 18px 0 22px; padding: 16px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface);
+}
+.diagram pre.mermaid { margin: 0; background: none; font-family: var(--f-mono); font-size: 12px; }
+
+#totop {
+  position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-size: 18px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+
+/* ---------- narrow ---------- */
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-inline: 16px; }
+  .rail { display: none; }
+  .mnav {
+    display: block; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
+    margin-inline: -16px; padding-inline: 16px; background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .mnav summary {
+    list-style: none; cursor: pointer; padding-block: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    font-weight: 600; font-size: 15px;
+  }
+  .mnav summary::-webkit-details-marker { display: none; }
+  .mnav summary .cur { color: var(--muted); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .mnav summary::after { content: "▾"; color: var(--muted); }
+  .mnav[open] summary::after { content: "▴"; }
+  .mnav .toc { max-height: 60vh; overflow-y: auto; margin-bottom: 12px; }
+  main { padding-top: 20px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+</style>
+
+</head>
+<body>
+<div id="progress" aria-hidden="true"></div>
+
+<div class="shell">
+  <aside class="rail" aria-label="Contents">
+    <div class="brand">Keel <small>PROPOSAL v1</small></div>
+    <p class="tag">Back-office OS for small businesses. Multi-tenant, skills-based, cost-routed.</p>
+    <p class="toc-label">Contents</p>
+    <ol class="toc" id="toc">
+<li><a href="#0-summary-for-the-impatient-vp" data-target="0-summary-for-the-impatient-vp"><span class="n">0</span><span>Summary for the impatient VP</span></a></li>
+<li><a href="#1-what-exists-today-and-the-gap" data-target="1-what-exists-today-and-the-gap"><span class="n">1</span><span>What exists today, and the gap</span></a></li>
+<li><a href="#2-the-customers-and-the-jobs-they-need-done" data-target="2-the-customers-and-the-jobs-they-need-done"><span class="n">2</span><span>The customers and the jobs they need done</span></a></li>
+<li><a href="#3-product-principles" data-target="3-product-principles"><span class="n">3</span><span>Product principles</span></a></li>
+<li><a href="#4-architecture" data-target="4-architecture"><span class="n">4</span><span>Architecture</span></a></li>
+<li><a href="#5-vertical-packs-how-keel-generalises-to-any-smb" data-target="5-vertical-packs-how-keel-generalises-to-any-smb"><span class="n">5</span><span>Vertical Packs</span></a></li>
+<li><a href="#6-learning-loop-governed-self-improvement" data-target="6-learning-loop-governed-self-improvement"><span class="n">6</span><span>Learning loop</span></a></li>
+<li><a href="#7-models-cheapest-option-that-passes-the-eval" data-target="7-models-cheapest-option-that-passes-the-eval"><span class="n">7</span><span>Models</span></a></li>
+<li><a href="#8-tech-stack-lean-on-purpose" data-target="8-tech-stack-lean-on-purpose"><span class="n">8</span><span>Tech stack: lean on purpose</span></a></li>
+<li><a href="#9-differentiation" data-target="9-differentiation"><span class="n">9</span><span>Differentiation</span></a></li>
+<li><a href="#10-go-to-market" data-target="10-go-to-market"><span class="n">10</span><span>Go-to-market</span></a></li>
+<li><a href="#11-regulation-and-trust" data-target="11-regulation-and-trust"><span class="n">11</span><span>Regulation and trust</span></a></li>
+<li><a href="#12-roadmap" data-target="12-roadmap"><span class="n">12</span><span>Roadmap</span></a></li>
+<li><a href="#13-risks-and-how-we-reduce-them" data-target="13-risks-and-how-we-reduce-them"><span class="n">13</span><span>Risks and how we reduce them</span></a></li>
+<li><a href="#14-open-questions" data-target="14-open-questions"><span class="n">14</span><span>Open questions</span></a></li>
+<li><a href="#appendix-a-research-notes-and-sources" data-target="appendix-a-research-notes-and-sources"><span class="n">A</span><span>Research notes and sources</span></a></li>
+    </ol>
+    <p class="src-note">Researched 3 Oct 2026. Prices are mostly from aggregators; re-check vendor pages before budgeting.</p>
+  </aside>
+
+  <main>
+    <details class="mnav" id="mnav">
+      <summary><span>Contents</span><span class="cur" id="mcur">Overview</span></summary>
+      <ol class="toc" id="mtoc">
+<li><a href="#0-summary-for-the-impatient-vp" data-target="0-summary-for-the-impatient-vp"><span class="n">0</span><span>Summary for the impatient VP</span></a></li>
+<li><a href="#1-what-exists-today-and-the-gap" data-target="1-what-exists-today-and-the-gap"><span class="n">1</span><span>What exists today, and the gap</span></a></li>
+<li><a href="#2-the-customers-and-the-jobs-they-need-done" data-target="2-the-customers-and-the-jobs-they-need-done"><span class="n">2</span><span>The customers and the jobs they need done</span></a></li>
+<li><a href="#3-product-principles" data-target="3-product-principles"><span class="n">3</span><span>Product principles</span></a></li>
+<li><a href="#4-architecture" data-target="4-architecture"><span class="n">4</span><span>Architecture</span></a></li>
+<li><a href="#5-vertical-packs-how-keel-generalises-to-any-smb" data-target="5-vertical-packs-how-keel-generalises-to-any-smb"><span class="n">5</span><span>Vertical Packs</span></a></li>
+<li><a href="#6-learning-loop-governed-self-improvement" data-target="6-learning-loop-governed-self-improvement"><span class="n">6</span><span>Learning loop</span></a></li>
+<li><a href="#7-models-cheapest-option-that-passes-the-eval" data-target="7-models-cheapest-option-that-passes-the-eval"><span class="n">7</span><span>Models</span></a></li>
+<li><a href="#8-tech-stack-lean-on-purpose" data-target="8-tech-stack-lean-on-purpose"><span class="n">8</span><span>Tech stack: lean on purpose</span></a></li>
+<li><a href="#9-differentiation" data-target="9-differentiation"><span class="n">9</span><span>Differentiation</span></a></li>
+<li><a href="#10-go-to-market" data-target="10-go-to-market"><span class="n">10</span><span>Go-to-market</span></a></li>
+<li><a href="#11-regulation-and-trust" data-target="11-regulation-and-trust"><span class="n">11</span><span>Regulation and trust</span></a></li>
+<li><a href="#12-roadmap" data-target="12-roadmap"><span class="n">12</span><span>Roadmap</span></a></li>
+<li><a href="#13-risks-and-how-we-reduce-them" data-target="13-risks-and-how-we-reduce-them"><span class="n">13</span><span>Risks and how we reduce them</span></a></li>
+<li><a href="#14-open-questions" data-target="14-open-questions"><span class="n">14</span><span>Open questions</span></a></li>
+<li><a href="#appendix-a-research-notes-and-sources" data-target="appendix-a-research-notes-and-sources"><span class="n">A</span><span>Research notes and sources</span></a></li>
+      </ol>
+    </details>
+
+    <header class="hero" id="top">
+      <div class="eyebrow"><span>Start-up proposal</span><span>v1</span><span>3 Oct 2026</span></div>
+      <h1>Keel<em>.</em></h1>
+      <p class="sub">The back-office operating system for small businesses. First verticals: ice-cream franchisees and children's day care.</p>
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><div class="v">≤ $12</div><div class="k">AI + infra cost per location / month</div></div>
+        <div class="stat" role="listitem"><div class="v">$99–249</div><div class="k">Price per location / month</div></div>
+        <div class="stat" role="listitem"><div class="v">~90%</div><div class="k">Target gross margin</div></div>
+        <div class="stat" role="listitem"><div class="v">$1.5–3</div><div class="k">Blended doc cost per 1,000 pages</div></div>
+      </div>
+      <p class="stats-note">All four figures are estimates; see §7.1 and §4.4.</p>
+      <blockquote class="lede">
+<p><strong>What Keel is.</strong> Glean is a search engine over a company's knowledge. Keel is different: it is a <em>bookkeeper, compliance officer and operations clerk</em> for businesses with 1–50 staff.</p>
+<p>Keel is built as a coding agent that uses skills. It:</p>
+<ul>
+<li>reads every document a business has, including handwritten ones;</li>
+<li>links each number back to its source, down to the pixel on the page;</li>
+<li>writes deterministic code ("recipes") the first time it sees a new kind of document, then re-runs that code at near-zero cost.</li>
+</ul>
+<p>The verticals are delivered as <strong>Vertical Packs</strong>: skills, ontology, metrics, compliance rules and connectors bundled for a business type. The first customers come through franchisors and accountants, not one at a time.</p>
+</blockquote>
+<hr />
+
+    </header>
+
+<section class="sec" id="sec-0-summary-for-the-impatient-vp" aria-labelledby="0-summary-for-the-impatient-vp"><h2 id="0-summary-for-the-impatient-vp">0. Summary for the impatient VP</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Problem</strong></td>
+<td>SMB owners spend 5–15 hours a week on paper: supplier invoices (some handwritten), timesheets, temperature logs, attendance, subsidy claims, royalty reports, VAT/sales tax, and year-end books. Today's tools are either generic (ChatGPT, Claude, QuickBooks AI) or one-dimensional (Dext captures receipts; Brightwheel runs the centre but has little AI).</td>
+</tr>
+<tr>
+<td><strong>Wedge</strong></td>
+<td>"Paper in, books + compliance out." The owner drops in any document, by phone photo, email forward or WhatsApp. Keel extracts it, checks it, links it and posts it, and keeps an inspection- or audit-ready record.</td>
+</tr>
+<tr>
+<td><strong>Why us, why now</strong></td>
+<td>Three things became cheap in 2026: <br>• Open-weight frontier models: GLM-5.3, Kimi K3, DeepSeek V4. <br>• Small OCR models that beat frontier models on document benchmarks: PaddleOCR-VL-1.5, GLM-OCR, MinerU2.5. <br>• Agent harnesses with skills: deepagents 0.7. <br>The architecture comes from two of your repos: the "agents propose, code decides, humans approve" pattern from <code>recon_knowledge_work_agent_v2</code> and the governed semantic layer from <code>edm_sementic_layer_v3.0</code>.</td>
+</tr>
+<tr>
+<td><strong>Differentiators</strong></td>
+<td>1. Every figure is traceable to the exact pixels it came from. <br>2. Compile-once recipes, so cost per document falls over time. <br>3. Hierarchical multi-tenancy (franchisor → franchisee → location; accounting firm → clients). <br>4. Vertical compliance packs. <br>5. Governed cross-tenant learning that gets better with every customer. <br>6. Open Agent-Skills packs that also run <em>inside</em> Claude and ChatGPT. Their distribution becomes ours.</td>
+</tr>
+<tr>
+<td><strong>Cost target</strong></td>
+<td>≤ <strong>$12 per location per month</strong> in AI and infrastructure cost (estimate), against a price of <strong>$99–249 per location per month</strong>. That is a gross margin above 90%.</td>
+</tr>
+<tr>
+<td><strong>Stack</strong></td>
+<td>deepagents 0.7 on self-hosted LangGraph with Postgres checkpointing; FastAPI; Next.js. Postgres provides tenant isolation (row-level security), vector search (pgvector) and the context graph (Apache AGE), so there is no separate Neo4j. Model access goes through OpenRouter with our own keys, routed by tier.</td>
+</tr>
+<tr>
+<td><strong>First 90 days</strong></td>
+<td>MVP for one vertical (day care: UK + US). Then one franchisor pilot (ice cream). Then the accountant channel.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-1-what-exists-today-and-the-gap" aria-labelledby="1-what-exists-today-and-the-gap"><h2 id="1-what-exists-today-and-the-gap">1. What exists today, and the gap</h2>
+<h3 id="11-anthropic-knowledge-work-pluginssmall-business-v1351-15-sep-2026">1.1 Anthropic: <code>knowledge-work-plugins/small-business</code> (v1.35.1, 15 Sep 2026)</h3>
+<p>This plugin is the best public reference for SMB agent skills, and we should learn from it rather than compete with it.</p>
+<p><strong>What it contains</strong></p>
+<ul>
+<li><strong>44 skills, about 6.4k lines of markdown, no code.</strong> Grouped as:<ul>
+<li><strong>Finance:</strong> <code>ap-processor</code>, <code>month-end-prep</code>, <code>close-month</code>, <code>payroll-prep</code>, <code>tax-season-organizer</code>, <code>cash-flow-snapshot</code>, <code>invoice-chase</code>, …</li>
+<li><strong>Sales and marketing:</strong> <code>lead-triage</code>, <code>review-reputation</code>, …</li>
+<li><strong>Operations and HR:</strong> <code>inventory-planner</code>, <code>hiring-screener</code>, <code>contract-review</code>, …</li>
+<li><strong>Setup:</strong> <code>smb-onboard</code>, <code>smb-router</code>, <code>build-agent</code>, <code>build-connector</code>.</li>
+</ul>
+</li>
+<li><strong>35 HTTP connectors (MCP servers)</strong>, including QuickBooks, Xero, Gusto, Square, Stripe, PayPal, Shopify, Zoho, DocuSign and Zapier.</li>
+</ul>
+<p><strong>Design ideas worth copying directly</strong></p>
+<ul>
+<li><strong>Two approvals for money.</strong> Coding a bill and paying it are separate steps, each needing approval. Eleven skills are "chains" (they link other skills), and every handoff between steps is approved.</li>
+<li><strong>No invented numbers.</strong> An unreadable field is left empty and named as unread (<code>shared/absent-is-not-zero.md</code>).</li>
+<li><strong><code>shared/untrusted-content.md</code>.</strong> Defends against prompt injection and fraud that changes bank details on a bill.</li>
+<li><strong><code>shared/tenant-scope.md</code>.</strong> A connected mailbox or Drive is not assumed to belong to the business.</li>
+<li><strong>"Test the capability, not the logo."</strong> Check what a connector can actually do. If writing isn't possible, fall back to producing an import file.</li>
+<li><strong>Progressive disclosure.</strong> A short <code>SKILL.md</code>, with <code>reference/*.md</code> files loaded only when needed.</li>
+</ul>
+<p><strong>What it does not do. This is our opening.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Evidence in the repo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Not multi-tenant.</strong> It runs for one owner in one desktop session, and business context is stored in Cowork session memory.</td>
+<td><code>smb-onboard</code> writes a <code>## Business context</code> block into memory. There is no support for an accountant or franchisor managing many businesses, and no audit trail.</td>
+</tr>
+<tr>
+<td><strong>No document pipeline.</strong> Handwriting is read by the model's own vision, plus a rule to flag low confidence.</td>
+<td>There is no OCR tiering, no confidence score per field, no review queue and no link back to the source pixels.</td>
+</tr>
+<tr>
+<td><strong>No vertical compliance.</strong></td>
+<td>A search for ratio, HACCP, food-safety or OSHA finds nothing. There is no shift rostering, and tax is US federal only.</td>
+</tr>
+<tr>
+<td><strong>Desktop and per-seat.</strong></td>
+<td>It needs a Claude Pro/Max/Team seat, and runs in the Cowork desktop app rather than as a hosted automation that runs headless.</td>
+</tr>
+<tr>
+<td><strong>No accounting connector in <code>finance/</code>.</strong></td>
+<td><code>finance/CONNECTORS.md</code> says: "no supported MCP servers yet" for ERP/accounting.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Market signal.</strong> "Claude for Small Business" launched on 13 May 2026, expanded in September, and has more than 900k installs (Forbes, 15 Sep 2026). Demand is clearly real. Anthropic is supplying the <em>horizontal</em> layer, and nobody owns the <em>vertical, multi-tenant, compliance-grade</em> layer.</p>
+<h3 id="12-others-moving-into-smb-agents">1.2 Others moving into SMB agents</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Player</th>
+<th>What they ship</th>
+<th>Threat</th>
+<th>Our angle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Intuit</strong> (QuickBooks agents, "Intuit Intelligence")</td>
+<td>Accounting, payments, finance and project agents, bundled from $38 to $275 a month</td>
+<td>High for generic bookkeeping</td>
+<td>We integrate with QuickBooks as the ledger of record. We own the documents, compliance and multi-location layer, which Intuit does not.</td>
+</tr>
+<tr>
+<td><strong>Xero JAX</strong> (July 2026)</td>
+<td>Document capture into the ledger, automatic bank reconciliation, chasing clients for documents. Connects to Claude and ChatGPT.</td>
+<td>High in the UK</td>
+<td>Same response. Xero is the ledger; we are the vertical pack and the evidence store.</td>
+</tr>
+<tr>
+<td><strong>OpenAI</strong></td>
+<td>Workspace Agents (successor to custom GPTs), a ChatGPT small-business programme, and AgentKit. Reports say Agent Builder is being wound down (unverified).</td>
+<td>Medium</td>
+<td>Horizontal; no vertical depth. We publish our packs into ChatGPT as an app.</td>
+</tr>
+<tr>
+<td><strong>Glean</strong></td>
+<td>Search plus agents. About $45–65 per user per month with a 50–100 seat minimum (third-party estimate).</td>
+<td>Low</td>
+<td>Out of reach for SMBs on price.</td>
+</tr>
+<tr>
+<td><strong>Docyt</strong> ($299–999 per location per month)</td>
+<td>AI bookkeeping for franchises and multi-location businesses</td>
+<td><strong>Closest competitor</strong> for ice cream</td>
+<td>No compliance or operations; finance only.</td>
+</tr>
+<tr>
+<td><strong>MarginEdge / Restaurant365</strong> (about $330–540 per location)</td>
+<td>Restaurant invoices, food cost, accounting</td>
+<td>Medium</td>
+<td>Expensive and restaurant-specific.</td>
+</tr>
+<tr>
+<td><strong>Dext / Hubdoc</strong> ($12–30 a month)</td>
+<td>Receipt and invoice capture</td>
+<td>Low to medium</td>
+<td>Capture only. No agent, no compliance, no chat.</td>
+</tr>
+<tr>
+<td><strong>Brightwheel / Procare / Kangarootime / Lillio</strong></td>
+<td>Childcare management. AI is thin (Procare's RoomRunner is the main example).</td>
+<td>Partner, not threat</td>
+<td>They are the systems of record for children and attendance. We connect to them and add finance, compliance and document intelligence.</td>
+</tr>
+<tr>
+<td><strong>Jolt / 7shifts / Toast IQ / FranConnect</strong></td>
+<td>HACCP logs, scheduling, POS AI, royalty management</td>
+<td>Partners</td>
+<td>Integrate with them. FranConnect is the route to franchisors.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Takeaway.</strong> Generic "chat with my QuickBooks" will be free or bundled within 12 months. We must win on <strong>vertical depth, evidence and trust, multi-entity structure, and cost</strong>, not on the chat interface.</p>
+<hr />
+</section>
+<section class="sec" id="sec-2-the-customers-and-the-jobs-they-need-done" aria-labelledby="2-the-customers-and-the-jobs-they-need-done"><h2 id="2-the-customers-and-the-jobs-they-need-done">2. The customers and the jobs they need done</h2>
+<h3 id="21-persona-a-day-care-owner-priya-one-centre-60-children-14-staff-uk-or-us">2.1 Persona A: day-care owner ("Priya"), one centre, 60 children, 14 staff (UK or US)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Today</th>
+<th>With Keel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supplier invoices and receipts (food, nappies, cleaning, repairs), some handwritten</td>
+<td>Shoebox, then spreadsheet, then the accountant at year end</td>
+<td>Photo or forward → extracted and validated → coded to the ledger, with a link to the source pixels</td>
+</tr>
+<tr>
+<td>Parent invoicing; subsidy and funded-hours claims (US: CCAP/CCDF, rules now vary by state after the 2026 HHS rollback; UK: local-authority funded hours)</td>
+<td>Manual reconciliation of co-pays against subsidy payments</td>
+<td>A claims agent reconciles attendance → claim → remittance, and flags under-payments</td>
+</tr>
+<tr>
+<td><strong>Staff-to-child ratios</strong> (UK EYFS: e.g. 1:5 for 2-year-olds; paediatric first aid needed to count in ratio. US: set by each state, e.g. about 1:4 for infants)</td>
+<td>A whiteboard roster</td>
+<td>A rota agent checks ratios and qualifications per room per hour, and warns before a breach</td>
+</tr>
+<tr>
+<td><strong>Staff certifications</strong>: first aid, DBS (UK) or background checks (US, re-checked at least every 5 years), training hours</td>
+<td>A paper file and memory</td>
+<td>A certificate vault with an expiry calendar and automatic reminders</td>
+</tr>
+<tr>
+<td><strong>CACFP meal records</strong> (US): menus, meal counts at point of service, eligibility forms</td>
+<td>Paper, audited</td>
+<td>Photo of the meal-count sheet → structured record → monthly claim pack</td>
+</tr>
+<tr>
+<td><strong>Inspection readiness</strong> (Ofsted, which uses a renewed framework from Nov 2025; US state licensing)</td>
+<td>A panic binder before each visit</td>
+<td>An "inspection binder" skill that builds the evidence pack on demand</td>
+</tr>
+<tr>
+<td>Year-end books, VAT / MTD, payroll prep</td>
+<td>The accountant, at £1–3k a year</td>
+<td>Books kept continuously; tax pack prepared and handed to the accountant or owner to file</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="22-persona-b-ice-cream-franchisee-marco-three-locations-seasonal-staff-of-825">2.2 Persona B: ice-cream franchisee ("Marco"), three locations, seasonal staff of 8–25</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>With Keel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dairy and supplier invoices, delivery notes, credit notes (often marked up by hand)</td>
+<td>A three-way match (purchase order ↔ delivery note ↔ invoice); handwritten shortages detected and turned into credit-note requests</td>
+</tr>
+<tr>
+<td><strong>Royalty and ad-fund reporting</strong> (e.g. Baskin-Robbins: 5.9% royalty plus 5% ad fund on gross sales)</td>
+<td>POS sales (Toast/Square) → royalty statement → franchisor portal; mismatches explained</td>
+</tr>
+<tr>
+<td>Handwritten customer order pads (wholesale and catering orders)</td>
+<td>Photo → order lines, normalised to the product catalogue, with handwriting rules (grouped pricing, strike-throughs, circled totals) → invoice draft or a QuickBooks import file</td>
+</tr>
+<tr>
+<td>Production batch sheets and QC records (for owners who make product in-house)</td>
+<td>Scanned forms → batch lot linked to ingredient lots, QC checks and packing; blank critical readings flagged as missing</td>
+</tr>
+<tr>
+<td><strong>HACCP temperature logs</strong> (freezer and dipping cabinet; UK "Safer Food Better Business" diary)</td>
+<td>Photo of the paper log or a sensor feed → an alert when out of range → a compliance record that holds up in an audit</td>
+</tr>
+<tr>
+<td>Seasonal hiring and onboarding (US I-9; UK right-to-work checks), shift scheduling, payroll prep</td>
+<td>Onboarding checklist agent; rota agent; payroll prep handed to Gusto or Xero Payroll</td>
+</tr>
+<tr>
+<td><strong>Multi-location consolidation</strong></td>
+<td>Books per location, then a consolidated P&amp;L, then a franchisor KPI pack</td>
+</tr>
+<tr>
+<td>Sales tax (US prepared-food rules differ by state) or UK VAT (ice cream is standard-rated at 20%)</td>
+<td>Tax treatment driven by rules in the vertical pack, with an evidence trail</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="23-what-the-two-personas-share-this-is-the-platform">2.3 What the two personas share (this is the platform)</h3>
+<p>Despite the different businesses, the jobs reduce to the same building blocks:</p>
+<div class="code-wrap"><pre><code>Documents → Fields with evidence → Entities (vendor, customer/family, staff, location, child, product)
+         → Transactions / Journal entries → Ledgers per entity → Consolidation
+         → Obligations (contracts, certifications, deadlines, ratios, temperature limits)
+         → Reports (P&amp;L, VAT/MTD, 1099, royalty, CACFP, inspection binder)
+</code></pre></div>
+<p>About 80% of the work is shared. The other ~20% is <strong>Vertical Pack</strong> content: skills, ontology terms, metrics, rules and connectors.</p>
+<hr />
+</section>
+<section class="sec" id="sec-3-product-principles" aria-labelledby="3-product-principles"><h2 id="3-product-principles">3. Product principles</h2>
+<ol>
+<li><strong>Paper first, mobile first.</strong> Owners photograph things, so the main way in is a phone photo, WhatsApp or an email forward, not a desktop upload screen.</li>
+<li><strong>Agents propose, code decides, humans approve</strong> (from <code>recon_knowledge_work_agent_v2</code>).<ul>
+<li>An LLM never computes a total, a tax figure or a ratio. Deterministic code does.</li>
+<li>Anything touching money, a filing or a customer has an approval gate.</li>
+</ul>
+</li>
+<li><strong>Evidence or it didn't happen.</strong><ul>
+<li>Every number carries provenance: document, page, bounding box, extractor, confidence, and who approved it.</li>
+<li>Absent is not zero.</li>
+</ul>
+</li>
+<li><strong>Compile once, replay forever.</strong><ul>
+<li>The first time Keel meets a new supplier's invoice layout, or a new POS export, a coding agent writes a recipe.</li>
+<li>After that, the recipe runs with no LLM calls.</li>
+</ul>
+</li>
+<li><strong>Tenant isolation is a database property, not a convention.</strong> It is enforced by Postgres row-level security (RLS) together with tenant identity carried in the JWT.</li>
+<li><strong>Prepare, don't file.</strong><ul>
+<li>Keel prepares tax figures and returns. The owner or a partner accountant reviews and submits.</li>
+<li>This avoids the US preparer (PTIN) and Circular 230 issues, and the UK tax-adviser registration with HMRC required from 18 May 2026.</li>
+</ul>
+</li>
+<li><strong>Cheapest model that passes the eval.</strong> Model choice is a routing decision checked against golden datasets, not a brand loyalty.</li>
+</ol>
+<hr />
+</section>
+<section class="sec" id="sec-4-architecture" aria-labelledby="4-architecture"><h2 id="4-architecture">4. Architecture</h2>
+<h3 id="41-system-overview">4.1 System overview</h3>
+<div class="diagram"><pre class="mermaid">flowchart TB
+  subgraph Intake[&quot;Intake (any channel)&quot;]
+    M[Mobile PWA camera] --&gt; Q
+    W[WhatsApp Business / SMS] --&gt; Q
+    E[Email forward: bills@tenant.keel.app] --&gt; Q
+    C[Connectors: QBO, Xero, Square, Toast, Brightwheel, Gusto, Drive] --&gt; Q
+    Q[(Intake queue - pgmq)]
+  end
+
+  subgraph DocPipe[&quot;Document Intelligence Pipeline (tiered, cost-routed)&quot;]
+    T0[Tier 0 triage: text-layer? LiteParse/pdfium] --&gt; T1[Tier 1 OSS OCR: PaddleOCR-VL-1.5 / GLM-OCR + bboxes]
+    T1 --&gt; T2[Tier 2 cheap LLM -&gt; JSON schema: GPT-6 Luna / DeepSeek V4.1 Flash]
+    T2 --&gt; V{Deterministic validators: totals, tax, dates, vendor master, dupes, bank-detail change}
+    V -- fail / low conf --&gt; T3[Tier 3 VLM re-read: Gemini 3.8 Flash]
+    T3 --&gt; V2{validate}
+    V2 -- fail / handwriting critical --&gt; T4[Tier 4 ADE DPT-3 Pro / Reducto]
+    T4 --&gt; HQ[Human review queue with bbox overlay]
+    V -- pass --&gt; R
+    V2 -- pass --&gt; R
+    HQ --&gt; R[Recipe cache: layout fingerprint -&gt; compiled extractor]
+  end
+
+  subgraph Core[&quot;Tenant Core (Postgres + RLS)&quot;]
+    EV[(Evidence store: docs, pages, fields, bboxes, confidence)]
+    LG[(Ledger: entities, txns, journals per location)]
+    CG[(Context graph: Apache AGE + pgvector)]
+    SL[Semantic layer: governed metrics YAML]
+    OB[(Obligations: contracts, certs, deadlines, ratios, temp limits)]
+    TR[(Agent traces + decisions audit)]
+  end
+
+  subgraph Agents[&quot;Agent Runtime (deepagents on LangGraph, self-hosted)&quot;]
+    SUP[Supervisor / router]
+    SUP --&gt; SA1[Bookkeeper subagent]
+    SUP --&gt; SA2[Compliance subagent]
+    SUP --&gt; SA3[Analyst / chat subagent]
+    SUP --&gt; SA4[Recipe engineer - coding subagent in sandbox]
+    SUP --&gt; SA5[Reporter: tax pack, royalty, binder]
+    GATES[LangGraph gates: interrupts + Postgres checkpointer]
+  end
+
+  subgraph GW[&quot;Semantic Gateway (MCP, JWT tenant identity)&quot;]
+    TOOLS[search_context, run_metric, get_evidence, post_journal_draft, ...]
+  end
+
+  Q --&gt; DocPipe
+  R --&gt; EV
+  EV --&gt; LG
+  Agents &lt;--&gt; GW &lt;--&gt; Core
+  GW &lt;--&gt; C
+  UI[Next.js app: inbox, review, chat, books, compliance calendar, consolidation] &lt;--&gt; Agents
+  Packs[Vertical Packs registry: skills + ontology + metrics + rules + flows] --&gt; Agents
+  Packs --&gt; SL
+  TR --&gt; Learn[Learning loop: confirm -&gt; distill -&gt; eval-gated pack PRs]
+  Learn --&gt; Packs
+</pre></div>
+<h3 id="42-multi-tenancy-model-hierarchical">4.2 Multi-tenancy model (hierarchical)</h3>
+<div class="code-wrap"><pre><code>Platform
+ └─ Organization (billing + identity root)
+     ├─ type: franchisor | accounting_firm | independent
+     └─ Business (legal entity: own ledger, tax IDs)
+         └─ Location (site: own rota, temp logs, ratios, POS)
+</code></pre></div>
+<p><strong>Who can see what</strong></p>
+<ul>
+<li>A <strong>franchisor</strong> can see the <em>metrics</em> it is entitled to from each franchisee (gross sales, royalty, compliance status), as set by policy. It cannot see their books.</li>
+<li>An <strong>accounting firm</strong> can see the full books of the clients that granted it access, using delegation tokens that can be revoked.</li>
+<li><strong>Consolidation</strong> works upwards: Location → Business → (optionally) Organization group.</li>
+</ul>
+<p><strong>How isolation is enforced (defence in depth)</strong></p>
+<p>The Prism repo already does this; we add a tenant dimension.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What enforces the tenant boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres</td>
+<td><code>tenant_id</code> on every row; RLS policies tied to <code>current_setting('app.tenant_id')</code>, set per transaction from the JWT.</td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td>Tenant identity comes <strong>only</strong> from the JWT, never from tool arguments. Results are returned as handles scoped to the user and tenant, not as raw rows.</td>
+</tr>
+<tr>
+<td>Agent filesystem</td>
+<td>Each tenant gets its own <code>CompositeBackend</code> routes (<code>/skills/</code> read-only, <code>/notes/</code> for tenant <code>AGENTS.md</code>, <code>/work/</code> for per-run scratch). A wildcard tenant is rejected (<code>sponsor_id &lt;&gt; '*'</code> in recon v2 becomes <code>tenant_id</code>).</td>
+</tr>
+<tr>
+<td>LangGraph</td>
+<td>The store namespace is prefixed with <code>(org, business)</code>. Threads are owned by the tenant.</td>
+</tr>
+<tr>
+<td>Sandbox</td>
+<td>One ephemeral sandbox per run, with no network and a read-only upload mount (from recon v2's <code>docker_backend.py</code>). In production, use Modal, Daytona or E2B so it scales to zero.</td>
+</tr>
+<tr>
+<td>Encryption</td>
+<td>Each tenant gets its own data key, wrapped by KMS, for the document blob store.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="43-agent-design-deepagents">4.3 Agent design (deepagents)</h3>
+<p>The shape is the one already proven in <code>recon_knowledge_work_agent_v2</code> (<code>assembly.py</code> with a supervisor and a <code>CompiledSubAgent</code> recipe engineer) and in LangChain's <code>paid-media-agent</code>. The parts:</p>
+<ul>
+<li><strong>One assembly, three runtimes:</strong> API (FastAPI + SSE), worker (queue consumer), CLI/tests. They all share <code>build_agent_components(tenant, pack, mode)</code>.</li>
+<li><strong>Supervisor (router).</strong><ul>
+<li>It loads the business's installed Vertical Packs and only the front matter of their skills.</li>
+<li>It has modes such as <code>chat</code>, <code>process_inbox</code>, <code>close_month</code>, <code>prepare_report</code> and <code>inspection</code>. Each mode gets a different tool surface through <code>InvocationGuardMiddleware</code> / <code>ToolSurfacePolicy</code>.</li>
+</ul>
+</li>
+<li><strong>Subagents:</strong><ul>
+<li><strong>Bookkeeper.</strong> Codes bills, matches documents, proposes journal entries and reconciles against bank and POS.</li>
+<li><strong>Compliance officer.</strong> Checks ratios, certificate expiries, HACCP ranges and contract obligations; maintains the compliance calendar.</li>
+<li><strong>Analyst.</strong> Chat over the semantic layer. It uses <code>search_context</code> then <code>run_metric</code> and never writes free SQL against the ledger. This follows Prism's gateway.</li>
+<li><strong>Recipe engineer (coding agent).</strong> Runs in the sandbox. It writes <code>recipe.py</code> for a new document layout or connector export, and loops on <code>recipes check</code> against golden files, up to N attempts. The output is versioned per tenant <strong>and</strong> can be promoted to a pack-level recipe (§6).</li>
+<li><strong>Reporter.</strong> Builds tax packs (VAT/MTD, Schedule C, 1099 list at the $2,000 threshold from 2026), royalty statements, CACFP claims and inspection binders. Its output is files (XLSX/PDF) plus an evidence appendix.</li>
+</ul>
+</li>
+<li><strong>Gates are LangGraph nodes, not prompts.</strong> The run follows a fixed spine: <code>intake → extract → validate → gate_review → post_draft → gate_approve → sync_to_ledger → finalize</code>. It pauses with <code>interrupt()</code> and checkpoints to Postgres. Approvals are written to an append-only <code>decisions</code> table.</li>
+<li><strong>Middleware</strong>, reused from recon v2 and paid-media: <code>OffloadMiddleware</code> (large tool results go to files), <code>RedactionMiddleware</code> (secrets and PII), retry and call limits, <code>current_date</code>, and a new <strong><code>BudgetMiddleware</code></strong> that enforces a per-tenant monthly AI-spend ceiling and drops to cheaper model tiers as it nears the cap.</li>
+<li><strong>Untrusted-content guard.</strong> Document text is data and never instructions (from Anthropic's <code>untrusted-content.md</code>). A change to a supplier's bank details always triggers a hard approval.</li>
+</ul>
+<h3 id="44-document-intelligence-pipeline-the-cost-engine">4.4 Document intelligence pipeline: the cost engine</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>When</th>
+<th>Engine</th>
+<th>≈ cost per page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Born-digital PDFs and e-invoices (most supplier invoices)</td>
+<td>LiteParse (Apache-2.0) / pdfium text layer, plus layout</td>
+<td>~$0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Scans and photos</td>
+<td><strong>PaddleOCR-VL-1.5</strong> (Apache-2.0, OmniDocBench v1.5 94.5) or <strong>GLM-OCR</strong> (MIT, 0.9B; API ≈ $0.10 per 1k pages). Both return bounding boxes.</td>
+<td>$0.0001–0.0005</td>
+</tr>
+<tr>
+<td>2</td>
+<td>OCR text → typed JSON (<code>Invoice</code>, <code>DeliveryNote</code>, <code>Timesheet</code>, <code>TempLog</code>, <code>MealCount</code>, …)</td>
+<td><strong>GPT-6 Luna</strong> ($0.10/$0.50 per M tokens), or <strong>DeepSeek V4.1 Flash</strong> off-peak ($0.15/$0.60)</td>
+<td>$0.0003–0.001</td>
+</tr>
+<tr>
+<td>3</td>
+<td>A validator fails, a field's confidence is low, or handwriting is detected</td>
+<td><strong>Gemini 3.8 Flash</strong> with the page image (Batch/Flex is half price; the price <strong>doubles on 1 Jan 2027</strong>, so budget for $1.50/$7.50)</td>
+<td>$0.002–0.006</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Still failing, or a critical handwritten field (amount, date, signature)</td>
+<td><strong>LandingAI ADE, DPT-3 Pro</strong> (handwriting, line-level grounding, ≈ 0.6–1¢), or <strong>Reducto</strong> Extract (2¢)</td>
+<td>$0.006–0.02</td>
+</tr>
+<tr>
+<td>H</td>
+<td>Still uncertain</td>
+<td>Human review queue: a side-by-side bounding-box viewer with one-tap fixes. <strong>Every fix becomes training signal</strong> (§6).</td>
+<td>Owner's time</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Blended estimate:</strong> <strong>$1.5–3 per 1,000 pages</strong>, assuming 70% stop at tiers 0–2, 25% at tier 3 and 5% at tier 4. Sending every page to a premium API would cost $6–40 per 1,000.
+<strong>After recipes compile</strong>, a returning supplier layout skips tier 2: the recipe maps OCR boxes to fields deterministically. The marginal cost of an extraction then approaches the OCR cost alone.</p>
+<p><strong>Deterministic validators</strong> form a library shared by all packs, each with its own error code. Every invoice gets these checks:</p>
+<ul>
+<li>line items × quantity add up to the subtotal, and subtotal + tax = total;</li>
+<li>the tax rate is valid for the jurisdiction and item class (for example, UK ice cream at 20% VAT);</li>
+<li>dates are plausible and the payment terms are consistent;</li>
+<li>the vendor matches the vendor master (fuzzy matching, as in <code>attribute_mapper</code>);</li>
+<li>duplicates are detected (vendor + number + amount, plus a perceptual hash of the image);</li>
+<li>bank details have not changed since the last invoice from that supplier.</li>
+</ul>
+<p><strong>Handwriting reality check.</strong> 2026 benchmarks (WildHandBench, OmniHandwritingOCR) show every system still "hallucinating plausible corrections" on handwriting. Three rules follow:</p>
+<ul>
+<li>handwritten <em>amounts</em> never post without either matching another source (POS, bank, PO) or a human tap;</li>
+<li>we build an <strong>internal gold set</strong> of 300–500 real pages per vertical from day one;</li>
+<li>we route by measured accuracy on that gold set, not by vendor claims.</li>
+</ul>
+<p>Also assume most small-business scans have <strong>no text layer</strong>: phone photos and photocopied forms go straight to tier 1 OCR. Validators need handwriting-specific rules for grouped prices, crossed-out lines, circled totals and tick marks.</p>
+<h3 id="45-semantic-layer-and-context-graph-the-per-tenant-business-brain">4.5 Semantic layer and context graph: the per-tenant "business brain"</h3>
+<p>This part is adapted from <code>edm_sementic_layer_v3.0</code> (Prism). The big change is that the graph lives in <strong>Postgres + Apache AGE + pgvector instead of Neo4j</strong>: one database to run, RLS-native, and cheap.</p>
+<p><strong>Ontology (core plus pack extensions)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Concepts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core</td>
+<td><code>Business</code>, <code>Location</code>, <code>Vendor</code>, <code>Customer</code>, <code>Staff</code>, <code>Document</code>, <code>Field</code>, <code>Transaction</code>, <code>JournalEntry</code>, <code>Account</code>, <code>Contract</code>, <code>Obligation</code>, <code>Deadline</code>, <code>Report</code></td>
+</tr>
+<tr>
+<td>Day-care pack</td>
+<td><code>Child</code>, <code>Guardian</code>, <code>Room</code>, <code>Session</code>, <code>Attendance</code>, <code>RatioRule</code>, <code>Certification</code>, <code>SubsidyClaim</code>, <code>MealCount</code>, <code>Inspection</code></td>
+</tr>
+<tr>
+<td>Ice-cream pack</td>
+<td><code>Product</code>, <code>Recipe(BOM)</code>, <code>Delivery</code>, <code>TempReading</code>, <code>HACCPLimit</code>, <code>RoyaltyAgreement</code>, <code>AdFund</code>, <code>POSDailySales</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Graph edges</strong> link the evidence, for example:</p>
+<div class="code-wrap"><pre><code>(Invoice)-[:BILLED_BY]-&gt;(Vendor)
+(Invoice)-[:FULFILS]-&gt;(PO)
+(DeliveryNote)-[:DELIVERED_AGAINST]-&gt;(PO)
+(Field)-[:EXTRACTED_FROM {bbox}]-&gt;(Page)
+(Contract)-[:IMPOSES]-&gt;(Obligation)-[:DUE_ON]-&gt;(Deadline)
+(Staff)-[:HOLDS]-&gt;(Certification)
+(Shift)-[:STAFFS]-&gt;(Room)
+</code></pre></div>
+<p>This is what "link data between different invoices" means in practice: price-drift alerts per supplier and SKU, missing credit notes, contract price compared with billed price, and so on.</p>
+<p><strong>Governed metrics</strong> are YAML files in the pack, for example <code>food_cost_pct</code>, <code>royalty_due</code>, <code>ratio_compliance_rate</code>, <code>occupancy</code>, <code>revenue_per_child</code>, <code>labour_pct</code>. The analyst agent calls <code>run_metric</code> and never hand-writes SQL. The same metric definitions drive the dashboards, the chat answers and the reports, so the numbers always agree.</p>
+<p><strong>Hybrid retrieval</strong> combines vector search, BM25 (keyword ranking) and graph expansion. It returns a context pack of about 3k tokens, the same pattern as Prism's <code>retrieval.py</code> and its <code>gate()</code> filter.</p>
+<p><strong>Agent trace memory</strong> stores <code>(:Trace)-[:HAS_STEP]-&gt;(:ToolCall)-[:TOUCHED]-&gt;(:Ctx)</code> for every run, owned by the tenant and kept for a set period. Traces power three things: explaining any answer ("why is this coded to Repairs?"), debugging, and the learning loop.</p>
+<h3 id="46-connectors">4.6 Connectors</h3>
+<p>Connectors use MCP first, with a deterministic fallback.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Connectors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ledgers (systems of record; we write drafts, they hold the books)</td>
+<td>QuickBooks Online, Xero (both have official MCP endpoints, already used by Anthropic's plugin), plus FreeAgent and Sage for the UK later</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Square, Toast, Clover, Lightspeed</td>
+</tr>
+<tr>
+<td>Payroll</td>
+<td>Gusto, Xero Payroll, QuickBooks Payroll</td>
+</tr>
+<tr>
+<td>Childcare</td>
+<td>Brightwheel, Procare, Kangarootime, Famly (UK), Blossom (UK). Many lack public APIs, so at first we use <strong>CSV/export recipes</strong> written by the recipe engineer.</td>
+</tr>
+<tr>
+<td>Food safety</td>
+<td>Jolt (sensors and checklists), or paper logs by photo</td>
+</tr>
+<tr>
+<td>Franchisor</td>
+<td>FranConnect Royalty Manager (export/import)</td>
+</tr>
+<tr>
+<td>Comms / files</td>
+<td>Gmail and M365 (forward-to-inbox), Google Drive / OneDrive, WhatsApp Business Cloud API</td>
+</tr>
+<tr>
+<td>Tax</td>
+<td>HMRC MTD VAT and ITSA APIs (later, via recognised-software status or a partner); US: produce files for the accountant</td>
+</tr>
+</tbody>
+</table></div>
+<p>Following Anthropic's "test the capability, not the logo": if a connector cannot write, Keel produces an import file (QBO/Xero CSV) instead.</p>
+<hr />
+</section>
+<section class="sec" id="sec-5-vertical-packs-how-keel-generalises-to-any-smb" aria-labelledby="5-vertical-packs-how-keel-generalises-to-any-smb"><h2 id="5-vertical-packs-how-keel-generalises-to-any-smb">5. Vertical Packs: how Keel generalises to any SMB</h2>
+<p>A pack is the unit of extensibility. It is a versioned folder, and it follows the <strong>Agent Skills open standard</strong> (<code>SKILL.md</code> with frontmatter, progressive disclosure), so it is portable.</p>
+<div class="code-wrap"><pre><code>packs/
+  core-bookkeeping/           # shared by every vertical
+    pack.yaml                 # id, version, depends_on, jurisdictions, connectors, pricing tier
+    skills/
+      ap-intake/SKILL.md      # + reference/{validators.md, gotchas.md}
+      bank-reconcile/SKILL.md
+      month-end-close/SKILL.md
+      consolidate/SKILL.md
+      tax-pack-uk-vat-mtd/SKILL.md
+      tax-pack-us-schedule-c/SKILL.md
+    ontology/core.v1.yaml
+    metrics/*.yaml
+    rules/*.py                # deterministic rules (pure functions, unit-tested)
+    flows/*.flow.yaml         # LangGraph spine + UI stepper as data (recon v2 pattern)
+    recipes/                  # promoted, layout-fingerprinted extractors
+    evals/golden/*.json       # gold docs + expected outputs; redteam.yaml
+  childcare-uk/               # depends_on: core-bookkeeping
+    skills/{ratio-check, staff-certs, funded-hours-claim, ofsted-binder, parent-billing}/
+    rules/eyfs_ratios.py      # versioned per regulation effective date
+  childcare-us/
+    skills/{ratio-check, ccap-claim, cacfp-claims, licensing-binder}/
+    rules/state_ratios/{ca,tx,ny,...}.yaml
+  franchise-qsr/
+    skills/{royalty-report, haccp-log, three-way-match, food-cost, seasonal-onboarding}/
+</code></pre></div>
+<p><strong>How a pack is built and maintained</strong></p>
+<ul>
+<li><strong>Author once, run anywhere.</strong><ul>
+<li>The same skills run inside Keel, where they gain multi-tenancy, evidence, recipes and gates.</li>
+<li>They can also be exported as a <strong>Claude Cowork plugin or ChatGPT app</strong>, a thin version backed by Keel's MCP gateway.</li>
+<li>This turns the 900k-install Claude SMB ecosystem into a top-of-funnel for Keel.</li>
+</ul>
+</li>
+<li><strong>New vertical = new pack.</strong> Examples: dental practice, cleaning company, landscaper, salon.<ul>
+<li>About 70–80% is inherited from <code>core-bookkeeping</code>.</li>
+<li>Building one means: a skill-authoring session with Claude Code / deepagents, a gold set of 200 documents, and an eval run.</li>
+<li>Target: <strong>under 3 weeks per new vertical.</strong></li>
+</ul>
+</li>
+<li><strong>Regulation as versioned data.</strong> Ratio tables, VAT rates and 1099 thresholds are YAML with an <code>effective_from</code> date and a citation, never words inside a prompt.</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-6-learning-loop-governed-self-improvement" aria-labelledby="6-learning-loop-governed-self-improvement"><h2 id="6-learning-loop-governed-self-improvement">6. Learning loop: governed self-improvement</h2>
+<p>This is RSI kept deliberately safe, with every step gated. It extends Prism's confirm-and-distill flywheel and LangChain's practice of appending to <code>agents.md</code> and consolidating weekly.</p>
+<div class="diagram"><pre class="mermaid">flowchart LR
+  A[Run: agent proposes] --&gt; B[Human approves / corrects in review UI]
+  B --&gt; C[Decision + correction stored with evidence &amp; trace]
+  C --&gt; D1[Tenant memory: vendor-&gt;account mapping, AGENTS.md notes, tenant recipes]
+  C --&gt; D2[Nightly distiller: anonymize, k&gt;=5 tenants agree, strip values]
+  D2 --&gt; E[Agent-engineer job: proposes pack PR - skill text, validator, recipe, metric]
+  E --&gt; F{Eval gate: golden + redteam + cost regression}
+  F -- pass --&gt; G[Canary to 5% tenants of that pack] --&gt; H[Promote pack version]
+  F -- fail --&gt; X[Discard + log]
+</pre></div>
+<p><strong>Three levels of memory</strong></p>
+<ol>
+<li><strong>Tenant memory</strong> works instantly and needs no model calls:<ul>
+<li>vendor → account mappings;</li>
+<li>the supplier's usual VAT treatment;</li>
+<li>"Marco always buys from Dairy X on Tuesdays";</li>
+<li>tenant-specific recipes.</li>
+</ul>
+</li>
+<li><strong>Pack memory</strong> works across tenants, with privacy safeguards:<ul>
+<li>It learns only <em>structure</em>: layouts, field positions, coding rules, validator thresholds. It never learns values.</li>
+<li>It needs at least k distinct tenants to agree, following Prism's "≥2 distinct callers" anti-poisoning rule, raised to ≥5 tenants.</li>
+<li>Results are promoted to the pack.</li>
+<li><strong>This is a network effect.</strong> The 50th franchisee of a brand gets near-perfect extraction for that brand's suppliers on day one.</li>
+</ul>
+</li>
+<li><strong>Platform memory</strong> is model-routing data:<ul>
+<li>It records, for each (document type, field, tier), the measured accuracy and cost.</li>
+<li>The router updates its thresholds weekly. This is cost-RSI.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Safety:</strong></p>
+<ul>
+<li>the system never changes its own gates or validators without human code review;</li>
+<li>every promotion is versioned and can be rolled back;</li>
+<li>evals are deterministic (Prism style: graded against numbers, with no LLM judge for financial outputs).</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-7-models-cheapest-option-that-passes-the-eval" aria-labelledby="7-models-cheapest-option-that-passes-the-eval"><h2 id="7-models-cheapest-option-that-passes-the-eval">7. Models: cheapest option that passes the eval</h2>
+<p><strong>Name checks</strong> (as of 3 Oct 2026; please re-check prices on vendor pages, because most figures came from aggregators):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You said</th>
+<th>Reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GLM 5.3</td>
+<td>✅ <strong>GLM-5.3</strong> (Z.ai), 14 Aug 2026. About 750B mixture-of-experts with ~40B active, 1M context. #1 open-weights model on the Artificial Analysis index. API about $1.40/$4.40 per M tokens.</td>
+</tr>
+<tr>
+<td>Kimi K3</td>
+<td>✅ <strong>Kimi K3</strong> (Moonshot), 16 Jul 2026. 2.8T total / 104B active, open weights. <strong>Not cheap: $3/$15.</strong> Use it sparingly.</td>
+</tr>
+<tr>
+<td>Gemini 3.8 Flash</td>
+<td>✅ Released 2 Sep 2026. $0.75/$3.75 at an <strong>introductory price that doubles on 1 Jan 2027</strong> (unverified). There is no 3.8 Flash-Lite text model; the cheapest text model is 3.5 Flash-Lite.</td>
+</tr>
+<tr>
+<td>GPT 6.1 Luna</td>
+<td>❌ Does not exist. You probably mean <strong>GPT-6 Luna</strong> ($0.10/$0.50, 1M context, 22 Sep 2026). GPT-6.1 shipped only as <em>Sol</em> ($2/$10).</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Routing table (starting point; the eval harness decides the final choice)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Primary</th>
+<th>Fallback</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Classification, extraction → JSON, summaries, notifications</td>
+<td>GPT-6 Luna</td>
+<td>DeepSeek V4.1 Flash (off-peak batch), Qwen3.5 Flash</td>
+<td>High volume, schema-constrained, cheap</td>
+</tr>
+<tr>
+<td>Supervisor, tool-calling chat, bookkeeping reasoning</td>
+<td>GLM-5.3 (or GLM-5.2 on DeepInfra at about $0.75/$2.40)</td>
+<td>Gemini 3.8 Flash, DeepSeek V4 Pro off-peak</td>
+<td>Strong tool calling (GLM-5.2 scores 99.1 on τ²-bench); open weights allow self-hosting later</td>
+</tr>
+<tr>
+<td>Vision re-read, handwriting</td>
+<td>Gemini 3.8 Flash (Batch/Flex)</td>
+<td>GPT-6 Luna vision; ADE DPT-3 Pro for grounded output</td>
+<td>Best price/quality on images</td>
+</tr>
+<tr>
+<td>Recipe engineer (coding), contract review, tax-pack review</td>
+<td>Kimi K3 or GPT-6.1 Sol</td>
+<td>Claude (when the budget allows)</td>
+<td>Runs rarely and its cost is spread across every later run; quality matters most here</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Cost levers</strong></p>
+<ul>
+<li>Route through <strong>OpenRouter with our own keys</strong> (no fee up to $25k a month), so switching models is a configuration change.</li>
+<li>Prompt caching: cached input is 90%+ cheaper. Keep skill front matter and system prompts stable.</li>
+<li>Batch and off-peak processing for the inbox. Owners don't need sub-second processing of a delivery note.</li>
+<li>Recipes remove the LLM from repeat work.</li>
+<li><code>BudgetMiddleware</code> enforces a ceiling per tenant.</li>
+<li>Measured, not assumed: every LLM call is logged with tenant, tier, tokens and cost.</li>
+</ul>
+<h3 id="71-unit-economics-per-location-per-month-estimate">7.1 Unit economics per location per month (estimate)</h3>
+<p>Assumes about 800 pages a month, 60 chat turns, and one month-end close.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Est. cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document pipeline (800 pages × about $0.003)</td>
+<td>$2.40</td>
+</tr>
+<tr>
+<td>Agent and chat tokens (about 20M input, 80% cached, + 1M output on Luna/GLM mix)</td>
+<td>$2–4</td>
+</tr>
+<tr>
+<td>Escalations (Gemini 3.8 Flash at 2027 prices, ADE)</td>
+<td>$1–3</td>
+</tr>
+<tr>
+<td>Infrastructure share (Postgres, object storage, workers, sandbox minutes)</td>
+<td>$2–3</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>≈ $7–12</strong></td>
+</tr>
+<tr>
+<td><strong>Price</strong></td>
+<td>Starter $49 (≤150 docs) · <strong>Pro $149 per location</strong> · Multi-site / franchise $99 per location (from 10 units) · Accountant firm $29 per client, white-label</td>
+</tr>
+<tr>
+<td><strong>Gross margin</strong></td>
+<td><strong>~90%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-8-tech-stack-lean-on-purpose" aria-labelledby="8-tech-stack-lean-on-purpose"><h2 id="8-tech-stack-lean-on-purpose">8. Tech stack: lean on purpose</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Choice</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent harness</td>
+<td><strong>deepagents 0.7.x</strong> (skills, subagents, <code>CompositeBackend</code>, <code>FilesystemPermission</code>, sandboxes)</td>
+<td>Matches the paid-media agent and recon v2; skills follow the open standard</td>
+</tr>
+<tr>
+<td>Orchestration</td>
+<td><strong>LangGraph 1.2, self-hosted</strong> inside FastAPI, with <code>langgraph-checkpoint-postgres</code></td>
+<td>Avoids LangSmith Deployment per-minute uptime fees while we are early; Managed Deep Agents is US-only beta</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry → self-hosted <strong>Langfuse</strong> (or the LangSmith free/Plus tier)</td>
+<td>Cost and traces per tenant</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><strong>Postgres 17</strong> (Neon/Supabase to start): RLS, pgvector, Apache AGE, pgmq for queues</td>
+<td>One database handles OLTP, vectors, graph and queue</td>
+</tr>
+<tr>
+<td>Blob storage</td>
+<td>Cloudflare R2 (no egress fees) with per-tenant prefixes and keys</td>
+<td>Cheap</td>
+</tr>
+<tr>
+<td>Sandbox</td>
+<td>Modal or E2B (scale to zero); Docker + gVisor for self-hosting</td>
+<td>Recipe engineer only</td>
+</tr>
+<tr>
+<td>OCR serving</td>
+<td>PaddleOCR-VL / GLM-OCR on serverless GPU (Modal/RunPod), scaled to zero; GLM-OCR API as a bridge</td>
+<td>Low SMB volume means we must not pay for an idle GPU</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td><strong>Next.js 15 + React</strong>, <code>assistant-ui</code> / LangGraph <code>useStream</code>, PDF.js bounding-box overlay viewer, shadcn/ui; installable PWA for the camera</td>
+<td></td>
+</tr>
+<tr>
+<td>Auth / tenancy</td>
+<td>Clerk or WorkOS (organisations, invitations, SSO later) → JWT claims <code>org_id, business_id, location_ids, role</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Messaging</td>
+<td>WhatsApp Business Cloud API, Postmark inbound email</td>
+<td>Paper-first intake</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td>Fly.io or Cloud Run + Neon, with Terraform</td>
+<td>Low fixed cost</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What to reuse from your repos</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>Take</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recon_knowledge_work_agent_v2</code></td>
+<td>The <code>assembly.py</code> pattern, supervisor plus <code>recipe_engineer</code> <code>CompiledSubAgent</code>, <code>InvocationGuardMiddleware</code> / <code>ToolSurfacePolicy</code>, <code>OffloadMiddleware</code>, <code>RedactionMiddleware</code>, sandbox interface, gate spine with <code>PostgresSaver</code>, append-only <code>run_decisions</code>, versioned <code>recipes</code> table keyed by layout fingerprint, flow-YAML-driven UI, scripted-model test harness. <em>Add:</em> real auth and RBAC, Postgres RLS, generic entities (remove the hard-wired <code>ENTITIES=("affiliate",)</code>), multiple model providers.</td>
+</tr>
+<tr>
+<td><code>edm_sementic_layer_v3.0</code></td>
+<td>Governed metric YAML, hybrid retrieval with RRF (reciprocal rank fusion), gateway pattern (MCP, JWT identity, handles not rows, audit, SQL guard), role-gating checked in four places, traces, confirm-and-distill loop with anti-poisoning rules, deterministic evals with canaries. <em>Change:</em> Neo4j becomes AGE + pgvector; add tenant dimension and write actions; move the result store into Redis/Postgres.</td>
+</tr>
+<tr>
+<td><code>langchain-ai/paid-media-agent</code></td>
+<td>Write-policy TOML, exact-proposal approval cards, offload with provenance metadata, scheduled reports, deny-by-default tool authorisation.</td>
+</tr>
+<tr>
+<td><code>anthropics/knowledge-work-plugins/small-business</code></td>
+<td>The <em>shared rule</em> files (absent-is-not-zero, untrusted-content, tenant-scope, currency-and-locale), the two-approval rule for money, and the structure of <code>ap-processor</code>, <code>month-end-prep</code>, <code>payroll-prep</code> and <code>tax-season-organizer</code>, which we can port into <code>core-bookkeeping</code> (check the repo licence first).</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-9-differentiation" aria-labelledby="9-differentiation"><h2 id="9-differentiation">9. Differentiation</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Differentiator</th>
+<th>Why Intuit, Xero, OpenAI, Anthropic or Glean won't easily copy it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Pixel-level evidence for every number</strong>, plus an evidence appendix in every report</td>
+<td>Horizontal assistants answer in prose, and ledgers store final numbers, not provenance. Accountants and inspectors trust evidence.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Compile-once recipes</strong>: cost per document falls over time and output is deterministic and auditable</td>
+<td>Chat-first products pay for the LLM on every request, so their unit cost rises with usage.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Hierarchical multi-tenancy</strong>: franchisor → franchisee → location; firm → clients; consolidation built in</td>
+<td>Cowork and ChatGPT are per-seat and per-user; QuickBooks and Xero work one company file at a time.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Vertical compliance packs</strong> (ratios, certificates, CACFP, HACCP, royalties, inspection binders) with regulation stored as versioned data</td>
+<td>It's low-margin domain work for big platforms, and childcare and franchise software vendors lack AI depth.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Cross-tenant structural learning</strong> (k-anonymous pack memory), a network effect per brand and per vertical</td>
+<td>Needs our multi-tenant evidence store; single-tenant assistants can't learn across customers.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Open packs that run inside Claude and ChatGPT</strong>: their distribution feeds our funnel</td>
+<td>Platform vendors won't build every vertical; we are the vertical supplier in their marketplaces.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Paper-first, WhatsApp-native intake</strong> for owners who never sit at a desk</td>
+<td>Desktop and agent apps assume a knowledge worker at a laptop.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Model-agnostic cost router, open-weights ready</strong> (GLM/Kimi/DeepSeek/Qwen); data residency is possible later (UK/EU)</td>
+<td>First-party labs are tied to their own models; our cost floor follows the market price of open weights.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-10-go-to-market" aria-labelledby="10-go-to-market"><h2 id="10-go-to-market">10. Go-to-market</h2>
+<ol>
+<li><strong>Beachhead: UK day care</strong> (about 35k non-childminder Ofsted providers). Why start here:<ul>
+<li>MTD for Income Tax started on 6 Apr 2026 (&gt;£50k; &gt;£30k from Apr 2027), and quarterly updates create a recurring need for software.</li>
+<li>Ratio and first-aid rules are clear and national.</li>
+<li>We can be strong on HMRC compliance.</li>
+<li><strong>US day care</strong> (about 92.5k licensed centres) comes next, starting with 2–3 states whose ratio and CCAP rules we encode first.</li>
+</ul>
+</li>
+<li><strong>Franchisor partnerships (ice cream / QSR).</strong><ul>
+<li>Pitch to the brand: "every unit sends clean royalty reports and food-safety records, automatically."</li>
+<li>One brand deal brings 50–1,000 units. The brand pays part of the cost or endorses us.</li>
+<li>Integrate with FranConnect rather than compete with it.</li>
+</ul>
+</li>
+<li><strong>Accountants and bookkeepers channel.</strong><ul>
+<li>Offer white-label at $29 per client.</li>
+<li>Xero has about 250k advisor partners, and firms are short of capacity.</li>
+<li>Each firm brings 20–200 SMB clients.</li>
+</ul>
+</li>
+<li><strong>Marketplaces.</strong><ul>
+<li>Publish the Claude plugin and ChatGPT app (thin versions).</li>
+<li>List in the Xero App Store and QuickBooks App Store, and the Brightwheel and Procare partner programmes.</li>
+</ul>
+</li>
+<li><strong>Pricing anchor.</strong> "Less than 2 hours of a bookkeeper a month." Show the hours saved and the compliance breaches avoided on the dashboard.</li>
+</ol>
+<p><strong>Willingness to pay</strong> is the main market risk. Only about 18% of US small businesses pay for AI (JPMorgan Chase Institute), and 28% spend $25–99 a month (Bluevine 2026). We therefore:</p>
+<ul>
+<li>sell <strong>outcomes</strong>: books closed, claim submitted, inspection pack ready;</li>
+<li>get distribution through franchisors and accountants, who pay or influence purchase decisions.</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-11-regulation-and-trust" aria-labelledby="11-regulation-and-trust"><h2 id="11-regulation-and-trust">11. Regulation and trust</h2>
+<ul>
+<li><strong>Tax filing posture.</strong> Keel <em>prepares</em> returns, and a human (the owner or partner accountant) <em>files</em>.<ul>
+<li><strong>UK:</strong> from 18 May 2026, anyone paid to interact with HMRC for clients must register as a tax adviser. Stay out of filing until we either register or partner. MTD-recognised software status can come later.</li>
+<li><strong>US:</strong> software doing "mechanical assistance" is not a return preparer. Representation is limited to CPAs, enrolled agents and attorneys (Circular 230).</li>
+</ul>
+</li>
+<li><strong>Data protection.</strong><ul>
+<li>UK GDPR / GDPR, with a data processing agreement per tenant.</li>
+<li>Children's data is special: minimise it, encrypt it per tenant, keep separate retention policies, and do not train on it.</li>
+<li>Childcare-specific, US: FERPA does not usually apply to private day care, but state privacy laws such as CCPA do.</li>
+<li>SOC 2 Type I by month 12.</li>
+</ul>
+</li>
+<li><strong>Payments.</strong> Payments are never sent autonomously. A bill payment always needs a separate approval, and a change to a payee's bank details always needs a hard approval (fraud vector).</li>
+<li><strong>AML (UK).</strong> If we offer paid bookkeeping or tax <em>services</em> (not just software), anti-money-laundering supervision applies. Stay a software provider, with partner accountants delivering the services.</li>
+<li><strong>Liability.</strong> Every output carries its evidence and approval record, and the product is positioned as a tool, not advice. Errors-and-omissions insurance.</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-12-roadmap" aria-labelledby="12-roadmap"><h2 id="12-roadmap">12. Roadmap</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Weeks</th>
+<th>Deliverables</th>
+<th>Exit criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0. Foundations</strong></td>
+<td>1–3</td>
+<td>Monorepo; Postgres with RLS and the multi-tenant schema; auth (WorkOS/Clerk); assembly of deepagents and LangGraph; model router with cost logging; R2 blob store; pgmq intake</td>
+<td>Isolation tests pass (a cross-tenant canary never leaks)</td>
+</tr>
+<tr>
+<td><strong>1. Doc pipeline v1</strong></td>
+<td>3–6</td>
+<td>Tiers 0–3; validator library (including handwriting rules: grouped pricing, strike-throughs, circled totals, tick marks); evidence model with bounding boxes; review UI with overlay; gold set of 300 pages (day care + ice cream)</td>
+<td>Field accuracy ≥97% after review routing; cost ≤$3 per 1k pages measured</td>
+</tr>
+<tr>
+<td><strong>2. Bookkeeper + ledger sync</strong></td>
+<td>5–9</td>
+<td><code>core-bookkeeping</code> pack: AP intake, three-way match, vendor master, Xero/QBO draft sync, bank reconciliation, month-end close, consolidation</td>
+<td>A pilot tenant closes a real month with fewer than 10 manual touches</td>
+</tr>
+<tr>
+<td><strong>3. Day-care pack (UK)</strong></td>
+<td>8–12</td>
+<td>Rota and ratio checker, certificate vault, funded-hours claim, parent billing, Ofsted binder, MTD/VAT tax pack</td>
+<td>5 paying centres</td>
+</tr>
+<tr>
+<td><strong>4. Recipes + learning loop</strong></td>
+<td>10–14</td>
+<td>Recipe engineer in sandbox; layout fingerprinting; tenant memory; nightly distiller; eval-gated promotion of pack versions</td>
+<td>≥40% of repeat documents skip tier 2</td>
+</tr>
+<tr>
+<td><strong>5. Franchise pack + franchisor console</strong></td>
+<td>12–18</td>
+<td>Royalty report, HACCP log (photo and sensor), food cost; franchisor role with metric-only visibility</td>
+<td>1 brand pilot, ≥10 units</td>
+</tr>
+<tr>
+<td><strong>6. Distribution</strong></td>
+<td>16–24</td>
+<td>Claude plugin / ChatGPT app export of packs; accountant white-label; US day-care pack (2 states)</td>
+<td>3 accounting firms, 100 locations</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Team (lean):</strong></p>
+<ul>
+<li>you (architecture and agents);</li>
+<li>one full-stack engineer (Next.js + FastAPI);</li>
+<li>one part-time domain advisor per vertical (a day-care owner, a franchisee or an accountant);</li>
+<li>contract design.</li>
+</ul>
+<p><strong>How to spend the $250 build credits</strong></p>
+<ul>
+<li>Use <strong>Claude Code on the web</strong> for scaffolding (phases 0–1).</li>
+<li>Port the recon-v2 and Prism modules with Claude Code.</li>
+<li>Write the packs' <code>SKILL.md</code> and validators with Claude Code as well.</li>
+<li>Keep the <em>runtime</em> on the cheap router, so the credits go into building, not inference.</li>
+</ul>
+<hr />
+</section>
+<section class="sec" id="sec-13-risks-and-how-we-reduce-them" aria-labelledby="13-risks-and-how-we-reduce-them"><h2 id="13-risks-and-how-we-reduce-them">13. Risks and how we reduce them</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intuit, Xero or Anthropic bundle "good enough" agents</td>
+<td>High</td>
+<td>Position as the vertical and evidence layer <em>on top of</em> their ledgers; ship inside their marketplaces</td>
+</tr>
+<tr>
+<td>Handwriting accuracy</td>
+<td>High</td>
+<td>Tiering plus cross-source matching plus human taps; gold-set metrics published to customers</td>
+</tr>
+<tr>
+<td>Low SMB willingness to pay</td>
+<td>Medium-high</td>
+<td>Channel sales through franchisors and accountants; outcome-based tiers</td>
+</tr>
+<tr>
+<td>Model price changes (e.g. Gemini doubling in 2027)</td>
+<td>Medium</td>
+<td>Router plus open-weights fallbacks plus recipes</td>
+</tr>
+<tr>
+<td>Regulatory (tax-adviser registration, children's data)</td>
+<td>Medium</td>
+<td>Prepare-don't-file, partners, strict data minimisation, DPIA</td>
+</tr>
+<tr>
+<td>Connector gaps (childcare software without APIs)</td>
+<td>Medium</td>
+<td>CSV/export recipes; partnership programmes</td>
+</tr>
+<tr>
+<td>Self-improvement poisoning or drift</td>
+<td>Low-medium</td>
+<td>k-anonymous structural learning only, eval gates, canaries, rollback</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section>
+<section class="sec" id="sec-14-open-questions" aria-labelledby="14-open-questions"><h2 id="14-open-questions">14. Open questions</h2>
+<ol>
+<li><strong>Launch geography:</strong> UK first (MTD tailwind, one regulator) or US first (larger market, 50 different rulebooks)? <em>Recommendation:</em> UK day care first, with US franchise pilots alongside.</li>
+<li><strong>Ledger stance:</strong> always sync to QuickBooks/Xero, or offer a built-in ledger for the smallest businesses? <em>Recommendation:</em> sync only for v1.</li>
+<li><strong>Data residency:</strong> UK/EU hosting from day one (it affects the choice of Neon or Supabase region and the model providers)?</li>
+<li><strong>Open weights:</strong> are Chinese-origin model weights (GLM, Kimi, DeepSeek, Qwen) acceptable to target customers and franchisors when hosted in the UK/US? This affects the default routing.</li>
+<li><strong>First franchisor target:</strong> do you have a warm intro to an ice-cream or QSR brand?</li>
+</ol>
+<hr />
+</section>
+<section class="sec" id="sec-appendix-a-research-notes-and-sources" aria-labelledby="appendix-a-research-notes-and-sources"><h2 id="appendix-a-research-notes-and-sources">Appendix A: research notes and sources</h2>
+<p>The research was done on 3 Oct 2026. Several primary pages (openai.com, langchain.com blog, techcrunch) were blocked by the egress proxy. Figures marked "estimate" or taken from aggregators should be re-checked.</p>
+<p><strong>Anthropic plugins.</strong></p>
+<ul>
+<li><a href="https://github.com/anthropics/knowledge-work-plugins" target="_blank" rel="noopener">https://github.com/anthropics/knowledge-work-plugins</a> (HEAD <code>8444efc</code>, 1 Oct 2026), <code>small-business</code> v1.35.1.</li>
+</ul>
+<p><strong>Claude for Small Business.</strong></p>
+<ul>
+<li><a href="https://www.axios.com/2026/05/13/anthropic-claude-small-business-smb" target="_blank" rel="noopener">https://www.axios.com/2026/05/13/anthropic-claude-small-business-smb</a></li>
+<li><a href="https://www.forbes.com/sites/boazsobrado/2026/09/15/anthropic-puts-claude-on-small-business-sales-after-900000-installs/" target="_blank" rel="noopener">https://www.forbes.com/sites/boazsobrado/2026/09/15/anthropic-puts-claude-on-small-business-sales-after-900000-installs/</a></li>
+</ul>
+<p><strong>OpenAI.</strong></p>
+<ul>
+<li><a href="https://openai.com/index/introducing-chatgpt-small-business-program/" target="_blank" rel="noopener">https://openai.com/index/introducing-chatgpt-small-business-program/</a></li>
+<li><a href="https://openai.com/index/introducing-agentkit/" target="_blank" rel="noopener">https://openai.com/index/introducing-agentkit/</a></li>
+</ul>
+<p><strong>Glean pricing (third-party).</strong></p>
+<ul>
+<li><a href="https://www.gosearch.ai/blog/glean-pricing-explained/" target="_blank" rel="noopener">https://www.gosearch.ai/blog/glean-pricing-explained/</a></li>
+</ul>
+<p><strong>LangChain paid-media agent.</strong></p>
+<ul>
+<li><a href="https://github.com/langchain-ai/paid-media-agent" target="_blank" rel="noopener">https://github.com/langchain-ai/paid-media-agent</a></li>
+<li><a href="https://www.langchain.com/blog/paid-media-agent" target="_blank" rel="noopener">https://www.langchain.com/blog/paid-media-agent</a></li>
+</ul>
+<p><strong>deepagents.</strong></p>
+<ul>
+<li><a href="https://github.com/langchain-ai/deepagents/releases" target="_blank" rel="noopener">https://github.com/langchain-ai/deepagents/releases</a></li>
+</ul>
+<p><strong>Models.</strong></p>
+<ul>
+<li><a href="https://llm-stats.com/models/glm-5.3" target="_blank" rel="noopener">https://llm-stats.com/models/glm-5.3</a></li>
+<li><a href="https://openrouter.ai/moonshotai/kimi-k3" target="_blank" rel="noopener">https://openrouter.ai/moonshotai/kimi-k3</a></li>
+<li><a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">https://ai.google.dev/gemini-api/docs/pricing</a></li>
+<li><a href="https://openrouter.ai/openai/gpt-6-luna" target="_blank" rel="noopener">https://openrouter.ai/openai/gpt-6-luna</a></li>
+<li><a href="https://benchlm.ai/benchmarks/tau2-bench" target="_blank" rel="noopener">https://benchlm.ai/benchmarks/tau2-bench</a></li>
+</ul>
+<p><strong>Document parsing.</strong></p>
+<ul>
+<li><a href="https://github.com/run-llama/liteparse" target="_blank" rel="noopener">https://github.com/run-llama/liteparse</a></li>
+<li><a href="https://docs.landing.ai/ade/ade-pricing" target="_blank" rel="noopener">https://docs.landing.ai/ade/ade-pricing</a></li>
+<li><a href="https://landing.ai/blog/introducing-agentic-document-extraction-gen2" target="_blank" rel="noopener">https://landing.ai/blog/introducing-agentic-document-extraction-gen2</a></li>
+<li><a href="https://github.com/opendatalab/OmniDocBench" target="_blank" rel="noopener">https://github.com/opendatalab/OmniDocBench</a></li>
+<li><a href="https://docs.z.ai/guides/vlm/glm-ocr" target="_blank" rel="noopener">https://docs.z.ai/guides/vlm/glm-ocr</a></li>
+<li><a href="https://huggingface.co/PaddlePaddle/PaddleOCR-VL" target="_blank" rel="noopener">https://huggingface.co/PaddlePaddle/PaddleOCR-VL</a></li>
+<li>Handwriting benchmarks: arXiv 2608.18586, 2608.22959</li>
+</ul>
+<p><strong>Competitors.</strong></p>
+<ul>
+<li><a href="https://www.xero.com/us/media-releases/xero-announces-new-ai-innovations-xerocon-london/" target="_blank" rel="noopener">https://www.xero.com/us/media-releases/xero-announces-new-ai-innovations-xerocon-london/</a></li>
+<li><a href="https://quickbooks.intuit.com/ai-accounting/" target="_blank" rel="noopener">https://quickbooks.intuit.com/ai-accounting/</a></li>
+<li><a href="https://www.docyt.com/pricing/" target="_blank" rel="noopener">https://www.docyt.com/pricing/</a></li>
+<li><a href="https://www.jolt.com/solutions/digital-food-safety/" target="_blank" rel="noopener">https://www.jolt.com/solutions/digital-food-safety/</a></li>
+<li><a href="https://www.franconnect.com/en/platform-overview/royalty-manager/" target="_blank" rel="noopener">https://www.franconnect.com/en/platform-overview/royalty-manager/</a></li>
+</ul>
+<p><strong>Childcare regulation.</strong></p>
+<ul>
+<li><a href="https://www.federalregister.gov/documents/2026/01/05/2025-24272/restoring-flexibility-in-the-child-care-and-development-fund-ccdf" target="_blank" rel="noopener">https://www.federalregister.gov/documents/2026/01/05/2025-24272/restoring-flexibility-in-the-child-care-and-development-fund-ccdf</a></li>
+<li><a href="https://www.gov.uk/government/statistics/childcare-providers-and-inspections-as-at-31-march-2026" target="_blank" rel="noopener">https://www.gov.uk/government/statistics/childcare-providers-and-inspections-as-at-31-march-2026</a></li>
+<li><a href="https://www.eyalliance.org.uk/news-events/news/dfe-publishes-response-consultation-eyfs-changes/" target="_blank" rel="noopener">https://www.eyalliance.org.uk/news-events/news/dfe-publishes-response-consultation-eyfs-changes/</a></li>
+</ul>
+<p><strong>Tax.</strong></p>
+<ul>
+<li><a href="https://www.icaew.com/technical/tax/tax-faculty/taxguides/2025/taxguide-01-25" target="_blank" rel="noopener">https://www.icaew.com/technical/tax/tax-faculty/taxguides/2025/taxguide-01-25</a> (MTD ITSA)</li>
+<li><a href="https://www.icaew.com/insights/tax-news/2026/jun-2026/hmrc-publishes-detailed-guidance-on-mandatory-tax-adviser-registration" target="_blank" rel="noopener">https://www.icaew.com/insights/tax-news/2026/jun-2026/hmrc-publishes-detailed-guidance-on-mandatory-tax-adviser-registration</a></li>
+<li><a href="https://www.avalara.com/blog/en/north-america/2025/07/one-big-beautiful-bill-act-1099-reporting-threshold.html" target="_blank" rel="noopener">https://www.avalara.com/blog/en/north-america/2025/07/one-big-beautiful-bill-act-1099-reporting-threshold.html</a></li>
+</ul>
+<p><strong>Market sizing and willingness to pay.</strong></p>
+<ul>
+<li><a href="https://www.childcareaware.org/price-landscape24/" target="_blank" rel="noopener">https://www.childcareaware.org/price-landscape24/</a></li>
+<li><a href="https://www.franchise.org/2026/02/ifa-predicts-steady-growth-for-franchising-in-2026-economic-outlook/" target="_blank" rel="noopener">https://www.franchise.org/2026/02/ifa-predicts-steady-growth-for-franchising-in-2026-economic-outlook/</a></li>
+<li><a href="https://www.jpmorganchase.com/institute/all-topics/business-growth-and-entrepreneurship/understanding-ai-use-by-small-businesses" target="_blank" rel="noopener">https://www.jpmorganchase.com/institute/all-topics/business-growth-and-entrepreneurship/understanding-ai-use-by-small-businesses</a></li>
+<li><a href="https://www.bluevine.com/blog/small-business-ai-trends-report-2026" target="_blank" rel="noopener">https://www.bluevine.com/blog/small-business-ai-trends-report-2026</a></li>
+</ul></section>
+  </main>
+</div>
+
+<button id="totop" type="button" aria-label="Back to top" hidden>↑</button>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var heads = Array.prototype.slice.call(document.querySelectorAll('main h2[id]'));
+  var mnav = document.getElementById('mnav');
+  var mcur = document.getElementById('mcur');
+  var bar = document.getElementById('progress');
+  var totop = document.getElementById('totop');
+
+  function setActive(id) {
+    links.forEach(function (a) { a.classList.toggle('active', a.dataset.target === id); });
+    var a = links.find(function (l) { return l.dataset.target === id; });
+    if (a && mcur) mcur.textContent = a.textContent.trim();
+    var railLink = document.querySelector('.rail .toc a.active');
+    if (railLink && railLink.scrollIntoView) {
+      var r = railLink.getBoundingClientRect(), rail = document.querySelector('.rail').getBoundingClientRect();
+      if (r.top < rail.top || r.bottom > rail.bottom) railLink.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function onScroll() {
+    var y = window.scrollY, h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (y / h) * 100 : 0) + '%';
+    totop.hidden = y < 600;
+    var current = null;
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].getBoundingClientRect().top <= 120) current = heads[i].id; else break;
+    }
+    if (current) setActive(current);
+    else { links.forEach(function (a) { a.classList.remove('active'); }); if (mcur) mcur.textContent = 'Overview'; }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  links.forEach(function (a) {
+    a.addEventListener('click', function () { if (mnav) mnav.open = false; });
+  });
+  totop.addEventListener('click', function () { window.scrollTo({ top: 0 }); });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'});</script>
+</body>
+</html>
