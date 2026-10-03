@@ -27,7 +27,7 @@ Postgres holds everything. Row-level security isolates each business's data.
 | Search | Every page Keel reads is searchable: exact words (Postgres full-text), misspellings and shorthand (pg_trgm), and with an OpenAI key similar meaning (pgvector, `text-embedding-3-small` at 512 dims), fused by reciprocal rank fusion. Vectors record their model; `keel reindex` re-embeds after a model change. |
 | Onboarding | A Desk checklist computed from real records: read one real paper first, then catalog, customers, control points and the business profile. The profile (year end, books, allergens) changes only through an approved diff. Ask Keel's `keel-onboard` and `keel-router` skills name one next step at a time. |
 | Ask Keel | A deepagents agent with skills (`backend/skills/`), shared rules, tenant memory, read-only tools and streamed answers. It works offline without API keys. |
-| Tracing | Optional Langfuse (self-hosted) for extraction and agent calls, tagged by org; off unless keys are set. |
+| Tracing | Optional self-hosted Langfuse for extraction and agent calls, tagged by org; off unless keys are set. `make langfuse` runs it locally, pre-wired. |
 | Metering | The Desk shows token and page cost for every model call, per tenant. |
 
 ## Run it locally
@@ -63,6 +63,21 @@ make lint        # ruff + eslint
 make typecheck   # mypy --strict + tsc
 make e2e         # Playwright: order → invoice → Ask Keel, and batch sheet → HACCP log → lot trace (needs make dev)
 ```
+
+## Tracing (Langfuse)
+
+```bash
+make langfuse            # whole stack in Docker + Langfuse; open http://localhost:3001
+make langfuse-services   # only Langfuse, for use with `make dev` (prints the three backend/.env lines)
+make langfuse-down
+```
+
+Langfuse shares Keel's Postgres server (its own `langfuse` database and role; it cannot read Keel's tables) and
+adds ClickHouse, Redis and MinIO. A project with fixed local API keys and an admin user
+(`admin@keel.local` / `keel-langfuse-local`) is created on first boot, so traces arrive with no setup. All of
+its secrets are local-dev defaults (`docker-compose.langfuse.yml`); override them for anything shared. Traces
+contain document text. For Cloud Run, point `LANGFUSE_BASE_URL` at a Langfuse you run elsewhere; the pilot
+deploy doesn't host one.
 
 ## Parser bake-off
 

@@ -1,4 +1,5 @@
 # Local stack. `docker compose up` runs everything; or run only `postgres` and use `make dev`.
+# Tracing: `make langfuse` adds self-hosted Langfuse (docker-compose.langfuse.yml).
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -8,6 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./backend/scripts/langfuse-db.sql:/docker-entrypoint-initdb.d/langfuse-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s

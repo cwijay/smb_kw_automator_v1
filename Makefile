@@ -1,5 +1,5 @@
 # Keel: two components (backend/, frontend/) + Postgres. See README for first-time setup.
-.PHONY: setup db migrate seed api worker web dev test e2e lint typecheck build openapi
+.PHONY: setup db migrate seed api worker web dev test e2e lint typecheck build openapi langfuse langfuse-services langfuse-down
 
 setup:            ## install backend + frontend dependencies
 	cd backend && uv sync --extra ocr --extra observability
@@ -25,6 +25,23 @@ web:
 
 dev:              ## api + worker + web together (Ctrl-C stops all)
 	@trap 'kill 0' INT; (cd backend && uv run keel api --reload) & (cd backend && uv run keel worker) & (cd frontend && pnpm dev) & wait
+
+LANGFUSE = docker compose -f docker-compose.yml -f docker-compose.langfuse.yml
+
+langfuse:         ## whole stack in Docker + self-hosted Langfuse on :3001, Keel pre-wired to trace
+	docker compose up -d --wait postgres
+	docker compose exec -T postgres psql -q -U postgres -v ON_ERROR_STOP=1 < backend/scripts/langfuse-db.sql
+	$(LANGFUSE) up -d --build
+	@echo "Keel http://localhost:3000 · Langfuse http://localhost:3001 (admin@keel.local / keel-langfuse-local)"
+
+langfuse-services: ## only Langfuse (+ its Postgres/ClickHouse/Redis/MinIO) for use with `make dev`
+	docker compose up -d --wait postgres
+	docker compose exec -T postgres psql -q -U postgres -v ON_ERROR_STOP=1 < backend/scripts/langfuse-db.sql
+	$(LANGFUSE) up -d langfuse-web langfuse-worker
+	@echo "Add to backend/.env: LANGFUSE_BASE_URL=http://localhost:3001 LANGFUSE_PUBLIC_KEY=pk-lf-keel-local LANGFUSE_SECRET_KEY=sk-lf-keel-local"
+
+langfuse-down:    ## stop everything started by `make langfuse` (data volumes are kept)
+	$(LANGFUSE) down
 
 openapi:          ## regenerate the typed frontend client from the backend's OpenAPI spec
 	cd backend && uv run keel openapi > ../openapi.json
