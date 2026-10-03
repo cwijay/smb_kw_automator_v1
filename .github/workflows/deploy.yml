@@ -19,7 +19,10 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Skips until infra/cloudrun/bootstrap.sh has been run and the GCP_PROJECT repository variable is set.
+    if: >-
+      vars.GCP_PROJECT != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     env:
       PROJECT: ${{ vars.GCP_PROJECT }}
