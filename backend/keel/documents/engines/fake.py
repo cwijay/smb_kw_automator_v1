@@ -51,6 +51,12 @@ class FakeExtractor:
     async def extract(self, pages: list[PageInput], schema: type[BaseModel], hint: str = "") -> EngineResult:
         conf_by_text = {w["text"].strip().lower(): float(w.get("conf", 0.9)) for p in pages for w in p.words}
         base_conf = 0.97 if any(w.get("source") == "text_layer" for p in pages for w in p.words) else 0.85
+        if schema.__name__ in ("BatchSheetX", "HaccpLogX"):
+            from keel.documents.engines.fake_production import parse_batch, parse_haccp
+
+            text = "\n".join(p.text for p in pages)
+            parser = parse_batch if schema.__name__ == "BatchSheetX" else parse_haccp
+            return EngineResult(data=parser(text, base_conf), engine=self.name)
         result = OrderPadX(customer_name=TextField(status="unreadable"))
         in_lines = False
         for raw in "\n".join(p.text for p in pages).splitlines():

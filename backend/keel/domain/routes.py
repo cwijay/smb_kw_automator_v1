@@ -25,6 +25,8 @@ router = APIRouter(tags=["orders"])
 
 
 class LineOut(BaseModel):
+    id: str
+    lots: list[str] = []
     description: str
     quantity: Decimal
     unit: str
@@ -92,18 +94,25 @@ class ActivityOut(BaseModel):
 
 async def _order_out(db: Any, o: Order, with_lines: bool = False) -> OrderOut:
     cust = await db.get(Customer, o.customer_id) if o.customer_id else None
-    lines = []
+    lines: list[LineOut] = []
     if with_lines:
-        lines = [
-            LineOut(
-                description=ln.description,
-                quantity=ln.quantity,
-                unit=ln.unit,
-                unit_price=ln.unit_price,
-                line_total=ln.line_total,
+        from keel.production.models import Allocation, Lot
+
+        for ln in (await db.scalars(select(OrderLine).where(OrderLine.order_id == o.id))).all():
+            lots = await db.scalars(
+                select(Lot.code).join(Allocation, Allocation.lot_id == Lot.id).where(Allocation.order_line_id == ln.id)
             )
-            for ln in await db.scalars(select(OrderLine).where(OrderLine.order_id == o.id))
-        ]
+            lines.append(
+                LineOut(
+                    id=str(ln.id),
+                    lots=list(lots),
+                    description=ln.description,
+                    quantity=ln.quantity,
+                    unit=ln.unit,
+                    unit_price=ln.unit_price,
+                    line_total=ln.line_total,
+                )
+            )
     return OrderOut(
         id=str(o.id),
         number=o.number,

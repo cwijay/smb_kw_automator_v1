@@ -30,3 +30,34 @@ def order_sheet_pdf(
     for row in rows:
         pdf.cell(0, 8, row, new_x="LMARGIN", new_y="NEXT")
     return bytes(pdf.output())
+
+
+def _sheet(rows: list[str]) -> bytes:
+    pdf = FPDF(format="A5")
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    for row in rows:
+        pdf.cell(0, 8, row, new_x="LMARGIN", new_y="NEXT")
+    return bytes(pdf.output())
+
+
+def batch_sheet_pdf(
+    ingredients: list[str],
+    *,
+    product: str = "Malai Kulfi",
+    batch: str = "B-001",
+    lot: str | None = "L-1042",
+    quantity: str = "120 tub",
+    made_on: str = "2026-10-01",
+) -> bytes:
+    rows = ["Batch Sheet", f"Product: {product}", f"Batch: {batch}", f"Date: {made_on}"]
+    if lot is not None:
+        rows.append(f"Output lot: {lot}")
+    rows += [f"Quantity: {quantity}", "Prepared by: RP", "Ingredient Lot Qty", *ingredients]
+    return _sheet(rows)
+
+
+def haccp_log_pdf(readings: list[str], *, batch: str = "B-001", day: str = "2026-10-01") -> bytes:
+    return _sheet(
+        ["HACCP Log", f"Batch: {batch}", f"Date: {day}", "Operator: RP", "CCP Value Time Initials", *readings]
+    )

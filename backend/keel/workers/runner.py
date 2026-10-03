@@ -24,7 +24,7 @@ async def enqueue(db: Any, org_id: uuid.UUID, kind: str, **payload: Any) -> None
 async def _process_document(org_id: uuid.UUID, payload: dict[str, Any]) -> None:
     from keel.documents.models import Document
     from keel.documents.pipeline import process_document
-    from keel.workflows.order_intake import start_order_intake
+    from keel.workflows.engine import start
 
     doc_id = uuid.UUID(payload["document_id"])
     try:
@@ -37,7 +37,10 @@ async def _process_document(org_id: uuid.UUID, payload: dict[str, Any]) -> None:
         raise
     if extraction_id is not None:
         requested_by = payload.get("user_id")
-        await start_order_intake(org_id, doc_id, uuid.UUID(requested_by) if requested_by else None)
+        async with tenant_session(org_id) as db:
+            doc = await db.get(Document, doc_id)
+            kind = doc.kind if doc else "order_pad"
+        await start(org_id, doc_id, kind, uuid.UUID(requested_by) if requested_by else None)
 
 
 HANDLERS: dict[str, Handler] = {"process_document": _process_document}

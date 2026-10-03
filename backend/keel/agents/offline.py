@@ -15,6 +15,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 from langchain_core.outputs import ChatGeneration, ChatResult
 
 ROUTES: list[tuple[str, str, dict[str, Any]]] = [
+    (r"\b(trace|recall|who got|which customers)\b.*?\b(?P<lot>[a-z]{1,3}-?\d[\w-]*)", "trace_lot", {}),
+    (r"\b(haccp|food safety|temperature|ccp|missing readings?|out of range)\b", "food_safety_status", {}),
     (r"\b(order|orders)\b.*\b(not|un)\s*-?invoiced|unbilled", "find_orders", {"status": "approved"}),
     (r"\b(invoice|invoiced|billed)\b", "list_invoices", {}),
     (r"\b(best|top|sell|selling|product|products|revenue by)\b", "sales_by_product", {}),
@@ -32,6 +34,8 @@ def _route(question: str) -> tuple[str, dict[str, Any]]:
         if not m:
             continue
         args = dict(args)
+        if name == "trace_lot":
+            args["lot_code"] = m.group("lot").upper()
         if name == "order_details":
             args["number"] = m.group("number").upper()
         if name == "search_documents":
@@ -93,6 +97,27 @@ def _summarise(name: str, data: dict[str, Any]) -> str:
             return "Nothing in the uploaded documents matches that."
         rows = "\n".join(f"- {m['file']}, page {m['page']}: …{m['snippet']}…" for m in data["matches"][:5])
         return f"Found in these documents:\n{rows}"
+    if name == "trace_lot":
+        who = (
+            ", ".join(
+                f"{c['customer']} (order {c['order_number']}, delivery {c['delivery_date']})" for c in data["customers"]
+            )
+            or "no customers on record yet"
+        )
+        came = ", ".join(f"{b['code']} ({b['ingredient'] or b['kind']})" for b in data["backward"]) or "no input lots"
+        text = f"Lot {data['lot']['code']}: made from {came}. Went to: {who}."
+        if data["gaps"]:
+            text += " Gaps: " + "; ".join(data["gaps"]) + "."
+        return text
+    if name == "food_safety_status":
+        text = (
+            f"Last {data['days']} days: {data['readings']} HACCP readings, {data['within_limits']} within limits, "
+            f"{data['missing']} missing, {data['out_of_range']} out of range."
+        )
+        for f in data["flagged"][:6]:
+            text += f"\n- {f['date']} {f['ccp']} {f['status'].replace('_', ' ')}"
+            text += f": {f['corrective_action']}" if f["corrective_action"] else " (no corrective action)"
+        return text
     if name == "catalog":
         return f"{len(data['products'])} products and {len(data['customers'])} customers. Products: " + ", ".join(
             f"{p['name']} ({p['sku']})" for p in data["products"][:12]

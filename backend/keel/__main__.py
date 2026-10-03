@@ -34,7 +34,10 @@ async def _setup_checkpointer(owner_url: str) -> None:
     dsn = owner_url.replace("postgresql+psycopg://", "postgresql://")
     async with await AsyncConnection.connect(dsn, autocommit=True) as conn:
         await AsyncPostgresSaver(conn).setup()  # type: ignore[arg-type]
-        await conn.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO keel_app")
+        await conn.execute(
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON checkpoints, checkpoint_blobs, checkpoint_writes, "
+            "checkpoint_migrations TO keel_app"
+        )
 
 
 def main(argv: list[str] | None = None) -> None:

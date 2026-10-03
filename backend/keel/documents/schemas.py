@@ -59,4 +59,43 @@ class OrderPadX(BaseModel):
     )
 
 
-SCHEMAS: dict[str, type[BaseModel]] = {"order_pad": OrderPadX}
+class IngredientX(BaseModel):
+    ingredient: TextField
+    lot_code: TextField = Field(default=TextField(), description="Supplier lot code as written. Blank stays blank.")
+    quantity: NumberField = NumberField()
+    unit: TextField = TextField()
+
+
+class BatchSheetX(BaseModel):
+    """A production batch / QC formula batch sheet."""
+
+    product_name: TextField
+    batch_number: TextField = TextField()
+    made_on: DateField = DateField()
+    output_lot: TextField = Field(default=TextField(), description="Lot code given to what this batch produced.")
+    quantity: NumberField = NumberField()
+    unit: TextField = TextField()
+    prepared_by: TextField = TextField()
+    ingredients: list[IngredientX] = []
+    instructions_found: list[str] = []
+
+
+class ReadingX(BaseModel):
+    ccp: TextField = Field(description="Critical control point as written, e.g. 'Fill temperature'.")
+    value: NumberField = Field(description="Measured value. A blank box is status 'blank', never 0.")
+    unit: TextField = TextField()
+    time: TextField = TextField()
+    initials: TextField = TextField()
+
+
+class HaccpLogX(BaseModel):
+    """A HACCP / critical-control-point monitoring log."""
+
+    batch_number: TextField = TextField()
+    log_date: DateField = DateField()
+    operator: TextField = TextField()
+    readings: list[ReadingX] = []
+    instructions_found: list[str] = []
+
+
+SCHEMAS: dict[str, type[BaseModel]] = {"order_pad": OrderPadX, "batch_sheet": BatchSheetX, "haccp_log": HaccpLogX}

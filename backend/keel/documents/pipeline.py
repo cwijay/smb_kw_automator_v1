@@ -6,6 +6,7 @@ Google key is configured. Every model call is metered per tenant.
 """
 
 import uuid
+from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -20,12 +21,20 @@ from keel.documents.engines.base import EngineResult, Extractor, PageInput
 from keel.documents.engines.fake import FakeExtractor
 from keel.documents.models import Chunk, Document, Extraction, FieldCitation, FieldResult, Page
 from keel.documents.render import page_text, render
-from keel.documents.schemas import SCHEMAS, OrderPadX
+from keel.documents.schemas import SCHEMAS, BatchSheetX, HaccpLogX, OrderPadX
 from keel.documents.validators.order import Finding, check_order
+from keel.documents.validators.production import check_batch, check_haccp
 from keel.files.storage import doc_key, storage
 from keel.platform.config import get_settings
 from keel.platform.db import tenant_session
 from keel.platform.logging import log
+
+CHECKS: dict[str, Callable[..., list[Finding]]] = {
+    "order_pad": check_order,
+    "batch_sheet": check_batch,
+    "haccp_log": check_haccp,
+}
+MODELS: dict[str, type[BaseModel]] = {"order_pad": OrderPadX, "batch_sheet": BatchSheetX, "haccp_log": HaccpLogX}
 
 
 def default_extractor() -> Extractor:
@@ -46,10 +55,10 @@ def escalation_extractor() -> Extractor | None:
     return LlmExtractor(s.model_vision_handwriting)
 
 
-def _needs_escalation(findings: list[Finding], data: OrderPadX, low: float) -> bool:
+def _needs_escalation(findings: list[Finding], data: BaseModel, low: float) -> bool:
     if any(f.severity == "block" for f in findings):
         return True
-    confs = [f.confidence for ln in data.lines for f in (ln.quantity, ln.line_total) if f.status == "read"]
+    confs = [f["confidence"] for _, f in flatten(data) if f["status"] == "read"]
     return bool(confs) and min(confs) < low
 
 
@@ -70,7 +79,7 @@ def flatten(model: BaseModel, prefix: str = "") -> list[tuple[str, dict[str, Any
 
 
 async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UUID | None:
-    """Returns the extraction id, or None when the document is not an order (stored for search only)."""
+    """Returns the extraction id, or None for kinds Keel only stores for search ("other")."""
     s = get_settings()
     async with tenant_session(org_id) as db:
         doc = await db.get(Document, document_id)
@@ -110,22 +119,24 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
         doc = await db.get(Document, document_id)
         assert doc is not None
         doc.page_count = len(rendered)
-        if kind not in ("order_pad", "unknown"):
+        kind = "order_pad" if kind == "unknown" else kind
+        if kind not in SCHEMAS:
             doc.status = "processed"
             return None
 
+    model, check = MODELS[kind], CHECKS[kind]
     extractor = default_extractor()
-    result: EngineResult = await extractor.extract(inputs, SCHEMAS["order_pad"])
-    order = OrderPadX.model_validate(result.data.model_dump())
-    findings = check_order(order, today=date.today(), low_confidence=s.low_confidence)
+    result: EngineResult = await extractor.extract(inputs, SCHEMAS[kind])
+    order = model.model_validate(result.data.model_dump())
+    findings = check(order, today=date.today(), low_confidence=s.low_confidence)
     results = [result]
     escalate = escalation_extractor()
     if escalate is not None and _needs_escalation(findings, order, s.low_confidence):
         second = await escalate.extract(
-            inputs, SCHEMAS["order_pad"], hint="Second read: earlier checks failed. Read each digit carefully."
+            inputs, SCHEMAS[kind], hint="Second read: earlier checks failed. Read each digit carefully."
         )
-        candidate = OrderPadX.model_validate(second.data.model_dump())
-        cand_findings = check_order(candidate, today=date.today(), low_confidence=s.low_confidence)
+        candidate = model.model_validate(second.data.model_dump())
+        cand_findings = check(candidate, today=date.today(), low_confidence=s.low_confidence)
         results.append(second)
         if sum(f.severity == "block" for f in cand_findings) <= sum(f.severity == "block" for f in findings):
             order, findings, result = candidate, cand_findings, second
@@ -147,7 +158,7 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
         extraction = Extraction(
             org_id=org_id,
             document_id=document_id,
-            schema_name="order_pad",
+            schema_name=kind,
             engine=result.engine,
             data=order.model_dump(mode="json"),
             checks=[f.dict() for f in findings],
@@ -158,7 +169,7 @@ async def process_document(org_id: uuid.UUID, document_id: uuid.UUID) -> uuid.UU
         await _store_fields(db, org_id, document_id, extraction.id, order, inputs, page_ids, result.engine)
         doc = await db.get(Document, document_id)
         assert doc is not None
-        doc.kind = "order_pad"
+        doc.kind = kind
         doc.status = "needs_review"
         await audit(
             db,
@@ -179,7 +190,7 @@ async def _store_fields(
     org_id: uuid.UUID,
     document_id: uuid.UUID,
     extraction_id: uuid.UUID,
-    order: OrderPadX,
+    order: BaseModel,
     inputs: list[PageInput],
     page_ids: list[uuid.UUID],
     engine: str,
@@ -197,7 +208,7 @@ async def _store_fields(
         )
         for page_id, page in zip(page_ids, inputs, strict=True):
             raw = f["value"]
-            if path.endswith(("quantity", "unit_price", "line_total", "total_written")) and raw is not None:
+            if path.endswith(("quantity", "unit_price", "line_total", "total_written", "].value")) and raw is not None:
                 raw = Decimal(str(raw))
             box = find_box(raw, page.words)
             if box is not None:

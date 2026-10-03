@@ -81,12 +81,20 @@ def render(data: bytes, mime: str) -> list[RenderedPage]:
 
 
 def page_text(words: list[dict[str, Any]]) -> str:
-    """Reading-order text: group words into lines by vertical position."""
-    lines: list[list[dict[str, Any]]] = []
-    for word in sorted(words, key=lambda w: (round(w["y"] + w["h"] / 2, 2), w["x"])):
-        mid = word["y"] + word["h"] / 2
-        if lines and abs((lines[-1][0]["y"] + lines[-1][0]["h"] / 2) - mid) < max(word["h"] * 0.6, 0.004):
-            lines[-1].append(word)
+    """Reading-order text: words whose boxes overlap vertically belong to the same line.
+
+    Overlap (not just midpoints) keeps low glyphs such as underscores or commas on their line.
+    """
+    lines: list[dict[str, Any]] = []  # {top, bottom, words}
+    for word in sorted(words, key=lambda w: (w["y"] + w["h"] / 2, w["x"])):
+        top, bottom = word["y"], word["y"] + word["h"]
+        for line in lines:
+            overlap = min(bottom, line["bottom"]) - max(top, line["top"])
+            if overlap > 0 and overlap >= 0.3 * min(word["h"] or 1e-6, line["bottom"] - line["top"]):
+                line["words"].append(word)
+                line["top"], line["bottom"] = min(line["top"], top), max(line["bottom"], bottom)
+                break
         else:
-            lines.append([word])
-    return "\n".join(" ".join(w["text"] for w in sorted(line, key=lambda w: w["x"])) for line in lines)
+            lines.append({"top": top, "bottom": bottom, "words": [word]})
+    lines.sort(key=lambda ln: ln["top"])
+    return "\n".join(" ".join(w["text"] for w in sorted(ln["words"], key=lambda w: w["x"])) for ln in lines)

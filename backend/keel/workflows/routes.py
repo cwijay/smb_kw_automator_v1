@@ -9,20 +9,28 @@ from keel.api.deps import Member, Viewer
 from keel.audit.models import Approval
 from keel.identity.service import Ctx
 from keel.platform.db import tenant_session
-from keel.workflows import order_intake
+from keel.workflows import engine
 
 router = APIRouter(tags=["workflows"])
 
 
 class DecisionIn(BaseModel):
+    """`revise` carries the owner's picks; Keel never guesses them."""
+
     action: Literal["approve", "revise", "reject"]
     customer_id: uuid.UUID | None = None
+    product_id: uuid.UUID | None = None
     line_products: dict[str, uuid.UUID] = {}
+    line_ccps: dict[str, uuid.UUID] = {}
+    corrective_actions: dict[str, str] = {}
+    acknowledge_missing_lots: bool | None = None
 
 
 class DecisionOut(BaseModel):
-    order_id: str | None
-    approval_id: str | None
+    order_id: str | None = None
+    batch_id: str | None = None
+    reading_ids: list[str] = []
+    approval_id: str | None = None
 
 
 class PendingApproval(BaseModel):
@@ -38,10 +46,18 @@ async def decide(run_id: uuid.UUID, body: DecisionIn, ctx: Ctx = Member) -> Deci
     overrides: dict[str, Any] = {}
     if body.customer_id:
         overrides["customer_id"] = str(body.customer_id)
+    if body.product_id:
+        overrides["product_id"] = str(body.product_id)
     if body.line_products:
         overrides["line_products"] = {k: str(v) for k, v in body.line_products.items()}
-    out = await order_intake.resume(ctx.org_id, ctx.user_id, run_id, body.action, overrides)
-    return DecisionOut(**out)
+    if body.line_ccps:
+        overrides["line_ccps"] = {k: str(v) for k, v in body.line_ccps.items()}
+    if body.corrective_actions:
+        overrides["corrective_actions"] = {k: v.strip() for k, v in body.corrective_actions.items() if v.strip()}
+    if body.acknowledge_missing_lots is not None:
+        overrides["acknowledge_missing_lots"] = body.acknowledge_missing_lots
+    out = await engine.resume(ctx.org_id, ctx.user_id, run_id, body.action, overrides)
+    return DecisionOut(approval_id=out["approval_id"], **out["result"])
 
 
 @router.get("/approvals", response_model=list[PendingApproval])

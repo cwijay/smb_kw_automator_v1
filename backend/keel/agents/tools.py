@@ -215,4 +215,63 @@ def build_tools(org_id: uuid.UUID, user_id: uuid.UUID) -> list[BaseTool]:
                 }
             )
 
-    return [business_snapshot, find_orders, order_details, sales_by_product, list_invoices, search_documents, catalog]
+    @tool
+    async def trace_lot(lot_code: str) -> str:
+        """Recall trace for one lot code: supplier lots it came from, batches it went into, and which
+        customers received it (order, delivery date). Also lists gaps such as ingredients with no lot code."""
+        from keel.production.trace import trace_lot as run_trace
+
+        async with session() as db:
+            result = await run_trace(db, lot_code.strip().upper())
+        return _j(result or {"error": f"No lot {lot_code} on record."})
+
+    @tool
+    async def food_safety_status(days: int = 30) -> str:
+        """HACCP readings in the last `days` days: counts within limits, missing and out of range, with the
+        flagged readings and their corrective actions."""
+        from keel.production.models import CcpDefinition, CorrectiveAction, HaccpReading
+
+        since = datetime.now(UTC).date() - timedelta(days=days)
+        async with session() as db:
+            rows = (
+                await db.execute(
+                    select(HaccpReading, CcpDefinition.name, CorrectiveAction.action)
+                    .outerjoin(CcpDefinition, CcpDefinition.id == HaccpReading.ccp_id)
+                    .outerjoin(CorrectiveAction, CorrectiveAction.reading_id == HaccpReading.id)
+                    .where(HaccpReading.recorded_on >= since)
+                )
+            ).all()
+        flagged = [
+            {
+                "ccp": n or r.ccp_as_written,
+                "status": r.status,
+                "value": r.value,
+                "date": r.recorded_on,
+                "batch": r.batch_number,
+                "corrective_action": a,
+            }
+            for r, n, a in rows
+            if r.status != "read"
+        ]
+        return _j(
+            {
+                "days": days,
+                "readings": len(rows),
+                "within_limits": sum(r.status == "read" for r, _, _ in rows),
+                "missing": sum(r.status == "missing" for r, _, _ in rows),
+                "out_of_range": sum(r.status == "out_of_range" for r, _, _ in rows),
+                "flagged": flagged,
+            }
+        )
+
+    return [
+        business_snapshot,
+        find_orders,
+        order_details,
+        sales_by_product,
+        list_invoices,
+        search_documents,
+        catalog,
+        trace_lot,
+        food_safety_status,
+    ]

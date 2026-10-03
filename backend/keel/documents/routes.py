@@ -40,6 +40,7 @@ class DocumentOut(BaseModel):
     run_id: str | None = None
     run_status: str | None = None
     order_id: str | None = None
+    result: dict[str, Any] = {}
 
 
 class Box(BaseModel):
@@ -107,13 +108,14 @@ def _doc_out(
         run_id=str(run.id) if run else None,
         run_status=run.status if run else None,
         order_id=str(order_id) if order_id else None,
+        result=(run.state or {}).get("result", {}) if run else {},
     )
 
 
 @router.post("/documents", response_model=DocumentOut)
 async def upload(
     file: UploadFile,
-    kind: Literal["order_pad", "other", "unknown"] = Form("order_pad"),
+    kind: Literal["order_pad", "batch_sheet", "haccp_log", "other", "unknown"] = Form("order_pad"),
     source: Literal["upload", "camera", "email"] = Form("upload"),
     ctx: Ctx = Member,
 ) -> DocumentOut:
@@ -284,7 +286,7 @@ async def correct_field(document_id: uuid.UUID, field_id: uuid.UUID, body: Corre
             box=Box(page_id=str(cit.page_id), x=cit.x, y=cit.y, w=cit.w, h=cit.h, text=cit.text) if cit else None,
         )
     if run_id:
-        from keel.workflows.order_intake import resume
+        from keel.workflows.engine import resume
 
         await resume(ctx.org_id, ctx.user_id, run_id, "revise", {})
     return out

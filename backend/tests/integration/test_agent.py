@@ -32,3 +32,17 @@ async def test_ask_keel_never_sees_other_tenant(owner: httpx.AsyncClient, other_
     events = await _ask(other_tenant, "Show me orders")
     text = "".join(e["text"] for e in events if e["type"] == "token")
     assert "9009" not in text
+
+
+async def test_ask_keel_traces_a_lot(owner: httpx.AsyncClient) -> None:
+    from tests.fixtures import batch_sheet_pdf
+    from tests.integration.test_production import _upload as upload_kind
+
+    await _catalog(owner)
+    doc = await upload_kind(
+        owner, batch_sheet_pdf(["Whole Milk M-555 136 lbs"], batch="B-555", lot="L-555"), "batch_sheet", "b.pdf"
+    )
+    await owner.post(f"/api/workflows/{doc['document']['run_id']}/decide", json={"action": "approve"})
+    events = await _ask(owner, "Trace lot L-555 please")
+    assert next(e for e in events if e["type"] == "tool")["args"] == {"lot_code": "L-555"}
+    assert "M-555" in "".join(e["text"] for e in events if e["type"] == "token")

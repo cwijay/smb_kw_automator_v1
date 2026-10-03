@@ -26,6 +26,7 @@ def create_app() -> FastAPI:
     from keel.documents.routes import router as documents_router
     from keel.domain.routes import router as domain_router
     from keel.identity.routes import router as identity_router
+    from keel.production.routes import router as production_router
     from keel.workflows.routes import router as workflow_router
 
     app = FastAPI(title="Keel API", version="0.1.0", lifespan=lifespan, generate_unique_id_function=lambda r: r.name)
@@ -36,7 +37,15 @@ def create_app() -> FastAPI:
     async def healthz() -> dict[str, str]:
         return {"status": "ok", "llm": "live" if get_settings().live_llm else "fake"}
 
-    for r in (identity_router, catalog_router, documents_router, workflow_router, domain_router, agent_router):
+    for r in (
+        identity_router,
+        catalog_router,
+        documents_router,
+        workflow_router,
+        domain_router,
+        production_router,
+        agent_router,
+    ):
         api.include_router(r)
     app.include_router(api)
     return app
