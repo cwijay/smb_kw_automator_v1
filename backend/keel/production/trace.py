@@ -57,9 +57,9 @@ WHERE a.lot_id = ANY(:lots)
 ORDER BY o.delivery_date NULLS LAST, o.number
 """
 
-MISSING_INPUTS = """
+MISSING_INPUTS = f"""
 SELECT b.number, bi.ingredient FROM batch_inputs bi JOIN batches b ON b.id = bi.batch_id
-WHERE bi.status = 'missing' AND b.id IN (SELECT id FROM batches WHERE output_lot_id = ANY(:lots))
+WHERE bi.status = 'missing' AND b.output_lot_id = ANY(:lots) AND {LIVE_BATCH}
 """
 
 

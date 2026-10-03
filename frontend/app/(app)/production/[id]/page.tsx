@@ -3,12 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Card, ErrorNote, PageTitle, Pill } from "@/components/ui";
+import { useState } from "react";
+import { CorrectBatch } from "@/components/production/CorrectBatch";
+import { Button, Card, ErrorNote, PageTitle, Pill } from "@/components/ui";
 import { getBatch, unwrap } from "@/lib/api";
 import { day } from "@/lib/format";
+import { canEdit, useMe } from "@/lib/hooks";
 
 export default function BatchPage() {
   const { id } = useParams<{ id: string }>();
+  const me = useMe();
+  const [correcting, setCorrecting] = useState(false);
   const q = useQuery({ queryKey: ["batch", id], queryFn: () => unwrap(getBatch({ path: { batch_id: id } })) });
   if (q.error) return <ErrorNote error={q.error} />;
   const b = q.data;
@@ -17,8 +22,20 @@ export default function BatchPage() {
     <>
       <Link href="/production" className="text-sm text-muted hover:text-ink">← Production</Link>
       <PageTitle title={`Batch ${b.number}`} sub={`${b.product ?? "Unknown product"} · made ${day(b.made_on)}${b.prepared_by ? ` by ${b.prepared_by}` : ""}`}>
-        <Pill tone="ledger">signed off{b.version > 1 ? ` · v${b.version}` : ""}</Pill>
+        {b.superseded_by ? <Pill tone="carbon">superseded · v{b.version}</Pill> : <Pill tone="ledger">signed off{b.version > 1 ? ` · v${b.version}` : ""}</Pill>}
       </PageTitle>
+      {b.superseded_by && (
+        <p className="mb-4 rounded-lg bg-carbon-soft px-4 py-3 text-sm">
+          This version was corrected and is kept for the record.{" "}
+          <Link href={`/production/${b.superseded_by}`} className="font-medium underline underline-offset-4">Open the latest version →</Link>
+        </p>
+      )}
+      {b.supersedes && (
+        <p className="mb-4 rounded-lg bg-surface-2 px-4 py-3 text-sm">
+          Corrected from <Link href={`/production/${b.supersedes}`} className="underline underline-offset-4">version {b.version - 1}</Link>
+          {b.correction_reason ? `: ${b.correction_reason}` : "."}
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card className="overflow-x-auto p-5">
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-muted">Made from</h2>
@@ -57,8 +74,16 @@ export default function BatchPage() {
           {b.source_document_id && (
             <Link href={`/documents/${b.source_document_id}`} className="inline-block underline underline-offset-4">See the original batch sheet</Link>
           )}
+          {!b.superseded_by && canEdit(me.data?.role) && !correcting && (
+            <Button variant="ghost" id="correct_batch" className="block" onClick={() => setCorrecting(true)}>Correct this record</Button>
+          )}
         </Card>
       </div>
+      {correcting && (
+        <div className="mt-6 max-w-3xl">
+          <CorrectBatch batch={b} onCancel={() => setCorrecting(false)} />
+        </div>
+      )}
     </>
   );
 }

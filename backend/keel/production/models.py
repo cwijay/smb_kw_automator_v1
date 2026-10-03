@@ -53,6 +53,7 @@ class Batch(Base):
     signed_off_by: Mapped[uuid.UUID | None]
     version: Mapped[int] = mapped_column(default=1)
     supersedes: Mapped[uuid.UUID | None]
+    correction_reason: Mapped[str | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

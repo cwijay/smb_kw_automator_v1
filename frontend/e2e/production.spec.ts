@@ -105,11 +105,26 @@ test("batch sheet → HACCP log → lot trace to the customer", async ({ page })
   await expect(page.getByText("Rose Water has no lot code", { exact: false })).toBeVisible();
   await shot(page, "16-trace-backward");
 
+  // Correct the batch: the rose water lot turns up on the jar label. A new version supersedes the old.
+  await page.goto("/production");
+  await page.getByRole("link", { name: "B-001" }).click();
+  await page.click("#correct_batch");
+  const roseRow = page.locator("tr", { hasText: "Rose Water" });
+  await roseRow.locator("input[id^=fix_lot_]").fill("RW-77");
+  await page.fill("#fix_reason", "Rose water lot was on the jar label");
+  await page.getByRole("button", { name: "Review the changes" }).click();
+  await expect(page.getByText("Rose Water: lot — → RW-77", { exact: false })).toBeVisible();
+  await shot(page, "17-correction-gate");
+  await page.click("#approve_correction");
+  await expect(page.getByText("Corrected from")).toBeVisible();
+  await page.goto("/trace?lot=L-1042");
+  await expect(page.getByText("no gaps")).toBeVisible();
+
   // Search tolerates the way people misspell things
   await page.goto("/search");
   await page.fill("#search_q", "temprature");
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page.getByRole("link", { name: /haccp-log\.pdf/ })).toBeVisible();
   await expect(page.getByText("close spelling").first()).toBeVisible();
-  await shot(page, "17-search");
+  await shot(page, "18-search");
 });

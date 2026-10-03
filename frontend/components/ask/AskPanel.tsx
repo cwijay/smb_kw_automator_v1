@@ -48,7 +48,11 @@ export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [turns]);
+  // Block body on purpose: newer browsers return a Promise from scrollIntoView, and React would call
+  // an effect's return value as its cleanup ("i is not a function" in production).
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [turns]);
 
   async function send(text: string) {
     const q = text.trim();

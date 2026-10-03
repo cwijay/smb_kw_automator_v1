@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 
 from keel.api.deps import Admin, Member, Viewer
 from keel.audit.service import audit
@@ -44,6 +45,9 @@ class BatchOut(BaseModel):
     version: int
     source_document_id: str | None
     inputs: list[BatchInputOut] = []
+    supersedes: str | None = None
+    superseded_by: str | None = None
+    correction_reason: str | None = None
 
 
 class CcpIn(BaseModel):
@@ -99,13 +103,23 @@ async def list_batches(ctx: Ctx = Viewer) -> list[BatchOut]:
             select(Batch, Product.name, Lot.code)
             .outerjoin(Product, Product.id == Batch.product_id)
             .outerjoin(Lot, Lot.id == Batch.output_lot_id)
+            .where(~select(Successor.id).where(Successor.supersedes == Batch.id).exists())  # latest versions only
             .order_by(Batch.created_at.desc())
             .limit(200)
         )
         return [_batch_out(b, p, lot) for b, p, lot in rows]
 
 
-def _batch_out(b: Batch, product: str | None, lot: str | None, inputs: list[BatchInputOut] | None = None) -> BatchOut:
+Successor = aliased(Batch)
+
+
+def _batch_out(
+    b: Batch,
+    product: str | None,
+    lot: str | None,
+    inputs: list[BatchInputOut] | None = None,
+    successor: str | None = None,
+) -> BatchOut:
     return BatchOut(
         id=str(b.id),
         number=b.number,
@@ -118,6 +132,9 @@ def _batch_out(b: Batch, product: str | None, lot: str | None, inputs: list[Batc
         version=b.version,
         source_document_id=str(b.source_document_id) if b.source_document_id else None,
         inputs=inputs or [],
+        supersedes=str(b.supersedes) if b.supersedes else None,
+        superseded_by=successor,
+        correction_reason=b.correction_reason,
     )
 
 
@@ -136,7 +153,14 @@ async def get_batch(batch_id: uuid.UUID, ctx: Ctx = Viewer) -> BatchOut:
             BatchInputOut(ingredient=i.ingredient, lot_code=code, quantity=i.quantity, unit=i.unit, status=i.status)
             for i, code in rows
         ]
-        return _batch_out(b, product.name if product else None, out_lot.code if out_lot else None, inputs)
+        successor = await db.scalar(select(Batch.id).where(Batch.supersedes == b.id))
+        return _batch_out(
+            b,
+            product.name if product else None,
+            out_lot.code if out_lot else None,
+            inputs,
+            str(successor) if successor else None,
+        )
 
 
 @router.get("/ccps", response_model=list[CcpOut])

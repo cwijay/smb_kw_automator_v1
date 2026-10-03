@@ -1144,7 +1144,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CorrectionIn"
+                "$ref": "#/components/schemas/keel__documents__routes__CorrectionIn"
               }
             }
           }
@@ -2006,6 +2006,112 @@
         }
       }
     },
+    "/api/batches/{batch_id}/corrections/stage": {
+      "post": {
+        "tags": [
+          "production"
+        ],
+        "summary": "Stage Correction",
+        "operationId": "stage_correction",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/keel__production__corrections__CorrectionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionStageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/batches/{batch_id}/corrections": {
+      "post": {
+        "tags": [
+          "production"
+        ],
+        "summary": "Commit Correction",
+        "operationId": "commit_correction",
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectionDoneIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionDoneOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/search": {
       "get": {
         "tags": [
@@ -2426,6 +2532,39 @@
             "type": "array",
             "title": "Inputs",
             "default": []
+          },
+          "supersedes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          },
+          "correction_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Reason"
           }
         },
         "type": "object",
@@ -2650,17 +2789,120 @@
         ],
         "title": "CcpOut"
       },
-      "CorrectionIn": {
+      "CorrectionDoneIn": {
         "properties": {
-          "value": {
-            "title": "Value"
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 5,
+            "title": "Reason"
+          },
+          "made_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Made On"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "prepared_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepared By"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/InputIn"
+            },
+            "type": "array",
+            "title": "Inputs"
+          },
+          "approval_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Approval Id"
           }
         },
         "type": "object",
         "required": [
-          "value"
+          "reason",
+          "inputs",
+          "approval_id"
         ],
-        "title": "CorrectionIn"
+        "title": "CorrectionDoneIn"
+      },
+      "CorrectionDoneOut": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "version"
+        ],
+        "title": "CorrectionDoneOut"
+      },
+      "CorrectionStageOut": {
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "title": "Approval Id"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "approval_id",
+          "summary"
+        ],
+        "title": "CorrectionStageOut"
       },
       "CustomerIn": {
         "properties": {
@@ -3209,6 +3451,60 @@
           "updated"
         ],
         "title": "ImportOut"
+      },
+      "InputIn": {
+        "properties": {
+          "ingredient": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Ingredient"
+          },
+          "lot_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Code"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient"
+        ],
+        "title": "InputIn"
       },
       "InviteIn": {
         "properties": {
@@ -4337,6 +4633,90 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "keel__documents__routes__CorrectionIn": {
+        "properties": {
+          "value": {
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "CorrectionIn"
+      },
+      "keel__production__corrections__CorrectionIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 5,
+            "title": "Reason"
+          },
+          "made_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Made On"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "prepared_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prepared By"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/InputIn"
+            },
+            "type": "array",
+            "title": "Inputs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason",
+          "inputs"
+        ],
+        "title": "CorrectionIn"
       }
     }
   }

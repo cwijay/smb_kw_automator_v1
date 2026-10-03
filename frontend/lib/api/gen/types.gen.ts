@@ -184,6 +184,18 @@ export type BatchOut = {
      * Inputs
      */
     inputs?: Array<BatchInputOut>;
+    /**
+     * Supersedes
+     */
+    supersedes?: string | null;
+    /**
+     * Superseded By
+     */
+    superseded_by?: string | null;
+    /**
+     * Correction Reason
+     */
+    correction_reason?: string | null;
 };
 
 /**
@@ -301,13 +313,67 @@ export type CcpOut = {
 };
 
 /**
- * CorrectionIn
+ * CorrectionDoneIn
  */
-export type CorrectionIn = {
+export type CorrectionDoneIn = {
     /**
-     * Value
+     * Reason
      */
-    value: unknown;
+    reason: string;
+    /**
+     * Made On
+     */
+    made_on?: string | null;
+    /**
+     * Quantity
+     */
+    quantity?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Prepared By
+     */
+    prepared_by?: string | null;
+    /**
+     * Inputs
+     */
+    inputs: Array<InputIn>;
+    /**
+     * Approval Id
+     */
+    approval_id: string;
+};
+
+/**
+ * CorrectionDoneOut
+ */
+export type CorrectionDoneOut = {
+    /**
+     * Batch Id
+     */
+    batch_id: string;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
+ * CorrectionStageOut
+ */
+export type CorrectionStageOut = {
+    /**
+     * Approval Id
+     */
+    approval_id: string;
+    /**
+     * Summary
+     */
+    summary: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -625,6 +691,28 @@ export type ImportOut = {
      * Updated
      */
     updated: number;
+};
+
+/**
+ * InputIn
+ */
+export type InputIn = {
+    /**
+     * Ingredient
+     */
+    ingredient: string;
+    /**
+     * Lot Code
+     */
+    lot_code?: string | null;
+    /**
+     * Quantity
+     */
+    quantity?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
 };
 
 /**
@@ -1323,6 +1411,46 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * CorrectionIn
+ */
+export type KeelDocumentsRoutesCorrectionIn = {
+    /**
+     * Value
+     */
+    value: unknown;
+};
+
+/**
+ * CorrectionIn
+ */
+export type KeelProductionCorrectionsCorrectionIn = {
+    /**
+     * Reason
+     */
+    reason: string;
+    /**
+     * Made On
+     */
+    made_on?: string | null;
+    /**
+     * Quantity
+     */
+    quantity?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Prepared By
+     */
+    prepared_by?: string | null;
+    /**
+     * Inputs
+     */
+    inputs: Array<InputIn>;
 };
 
 export type HealthzData = {
@@ -2036,7 +2164,7 @@ export type PageImageResponses = {
 };
 
 export type CorrectFieldData = {
-    body: CorrectionIn;
+    body: KeelDocumentsRoutesCorrectionIn;
     path: {
         /**
          * Document Id
@@ -2617,6 +2745,66 @@ export type AllocateResponses = {
 };
 
 export type AllocateResponse = AllocateResponses[keyof AllocateResponses];
+
+export type StageCorrectionData = {
+    body: KeelProductionCorrectionsCorrectionIn;
+    path: {
+        /**
+         * Batch Id
+         */
+        batch_id: string;
+    };
+    query?: never;
+    url: '/api/batches/{batch_id}/corrections/stage';
+};
+
+export type StageCorrectionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StageCorrectionError = StageCorrectionErrors[keyof StageCorrectionErrors];
+
+export type StageCorrectionResponses = {
+    /**
+     * Successful Response
+     */
+    200: CorrectionStageOut;
+};
+
+export type StageCorrectionResponse = StageCorrectionResponses[keyof StageCorrectionResponses];
+
+export type CommitCorrectionData = {
+    body: CorrectionDoneIn;
+    path: {
+        /**
+         * Batch Id
+         */
+        batch_id: string;
+    };
+    query?: never;
+    url: '/api/batches/{batch_id}/corrections';
+};
+
+export type CommitCorrectionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CommitCorrectionError = CommitCorrectionErrors[keyof CommitCorrectionErrors];
+
+export type CommitCorrectionResponses = {
+    /**
+     * Successful Response
+     */
+    200: CorrectionDoneOut;
+};
+
+export type CommitCorrectionResponse = CommitCorrectionResponses[keyof CommitCorrectionResponses];
 
 export type SearchData = {
     body?: never;
